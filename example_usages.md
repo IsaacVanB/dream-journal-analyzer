@@ -139,17 +139,8 @@ The commands currently use two different scoring paths:
 | `dream-analyzer analyze` with related dreams enabled | Cosine similarity | Higher is more similar. |
 | `src/cli/compare_models.py analyze` | Cosine similarity | Higher is more similar. |
 
-Collections created by `dream-analyzer index` do not specify a Chroma distance
-space, so Chroma's current default applies: squared L2 distance. In contrast,
-the related-dream analysis path reads the stored vectors and calculates cosine
-similarity in Python. These rankings and numeric scores are not interchangeable,
-and they can select different dreams because stored embeddings are not
-explicitly normalized.
-
-`dream-analyzer cluster` also performs cosine-based calculations, but it does not
-retrieve related dreams: it normalizes vectors, uses cosine distance for UMAP,
-uses cosine similarity for representative selection, and uses Euclidean
-distance for HDBSCAN.
+Chroma-distance and cosine-similarity scores are not interchangeable and may
+produce different rankings.
 
 ## `dream-analyzer trends`
 
@@ -225,12 +216,6 @@ Clusters embeddings already stored in ChromaDB. It writes a per-dream CSV, an
 interactive HTML map, two PNG maps, and a Markdown evidence report under
 `outputs/clusters/`. It does not regenerate embeddings.
 
-The CLI delegates its work to `dream_analysis.clustering` and
-`dream_analysis.cluster_reporting`. Use `DreamEmbeddingRepository` and
-`DreamClusteringService` when another Python workflow needs computed cluster
-data without files, then pass the resulting `ClusterAnalysis` to
-`ClusterReportService` only when artifacts are wanted.
-
 ```bash
 dream-analyzer cluster
 dream-analyzer cluster --collection-name dreams_qwen3_embedding
@@ -298,25 +283,9 @@ Requires an existing ChromaDB index and Ollama running locally at `http://localh
 
 ## `dream-analyzer ask`
 
-Answers a question through Ollama's tool-calling loop. The model can call one
-of eight read-only tools: semantic `search_dreams`, exhaustive
-`get_dreams_by_date_range`, deterministic `get_dream_statistics`, deterministic
-`analyze_tag_trends`, dictionary-backed `get_character_context`, structured
-`get_character_mentions`, exact
-`get_dream_by_id`, or exact
-`get_dreams_by_tags`. The date-range tool is intended for questions about all
-dreams or common patterns within a period and requires inclusive `start_date`
-and `end_date` values. The ID tool supports prompts such as
-`Get dream-2025-1-9-0 and analyze it`. The tag tool returns dreams containing
-every supplied tag (AND matching), so prompts such as
-`Get all dreams tagged school` and
-`Get all dreams tagged school and lucid?` use exact journal tags. The model
-inspects bounded results and then produces a
-grounded answer with dream IDs and dates.
-
-Internally, these tools implement a common `AgentTool` protocol and are passed
-to the agent as an ordered registry. New retrieval tools can therefore be added
-without extending hardcoded dispatch branches.
+Answers a question with semantic search, date and tag filters, journal
+statistics, and optional character data. Answers cite dream IDs and dates.
+Multiple tags use AND matching.
 
 ```bash
 dream-analyzer ask "What patterns appear in dreams about hidden rooms?"
@@ -369,57 +338,11 @@ Arguments:
   `700`.
 - `--temperature`: sampling temperature. Defaults to `0.1`.
 
-The `search_dreams` tool supports optional inclusive `start_date` and `end_date`
-arguments in `YYYY-MM-DD` format. The agent resolves relative wording using the
-current date and treats "last month" as the previous calendar month. Date bounds
-are applied together with semantic terms, so a question about school dreams from
-last month searches for school content only inside that month. Before executing
-the call, the agent removes date bounds if the original user question contains
-no explicit calendar or relative-time constraint. Corrected calls are labeled
-in debug output and Markdown tool traces.
-
-`get_character_mentions` uses the `named_characters` extracted by
-`structure_dreams.py`, not the manually edited character lookup. Names match
-case-insensitively and counts are deduplicated within each dream. Its results
-always report the share of current parsed dreams that have matching structured
-records; unstructured dreams cannot contribute mentions. Date filters use the
-current parsed-journal dates, and structured records for IDs no longer present
-in that journal are excluded. Model evidence caps long dream-ID lists, while an
-`--output` Markdown report preserves the complete lists.
-
-`get_character_context` looks up canonical names and aliases
-case-insensitively in the character dictionary. It returns manually curated
-relationship and background context, plus a compact mention summary when one is
-present. If the dictionary uses `relationship_history`, the tool can use a
-dream's date to select entries whose inclusive date bounds apply. Ambiguous
-aliases, missing names, and missing date-specific history are reported rather
-than guessed. The dictionary may be either a top-level array or the envelope
-written by `build_character_lookup.py`.
-
-Exact duplicate calls reuse their cached result without another Chroma query,
-although each model request still consumes one slot in `--max-tool-calls`. Every
-answer uses a fresh tools-disabled final request. The agent deduplicates the
-candidate pool and combines rankings from distinct queries with reciprocal-rank
-fusion, while repeated queries do not add ranking weight. Exhaustive date-range
-and exact-tag sets are semantically reranked without dropping matches before
-they enter that fusion. Only the highest-ranked
-`--max-synthesis-dreams` entries are eligible for the final prompt. At least 105
-words are retained for every included dream (or its complete text when shorter),
-and lower-ranked dreams are omitted when the context cannot preserve that
-minimum. Remaining space is assigned to higher-ranked dreams first. Any calls
-beyond the tool budget are recorded as unexecuted.
-
-The retrieval prompt asks the model to return `SEARCH_COMPLETE` when it has
-enough evidence. That response is treated only as a signal to start ranked
-synthesis; any draft answer is discarded. If the final
-synthesis response is empty, the CLI prints the partial state, saves a
-partial report when `--output` is present, and exits with status 2. `--debug`
-prints and saves a turn-by-turn trace containing normalized assistant messages,
-whether tools were enabled, and Ollama response diagnostics including
-`done_reason`, token counts, durations, any available thinking content, and the
-exact forced prompt with its evidence packet. Because that trace can contain
-private journal details, enable it only when needed and protect the saved report
-accordingly.
+Date wording such as "last month" is resolved relative to the current date and
+combined with semantic search terms. Character-mention questions require the
+structured file; relationship questions use the character dictionary. Debug
+traces can contain private journal text, so protect reports created with
+`--debug`.
 
 Requires an existing matching ChromaDB index, a tool-capable chat model, and
 Ollama running locally.
@@ -542,33 +465,11 @@ Analyze arguments:
 - `--temperature`: sampling temperature used by every chat model. Defaults to
   `0.0`.
 
-Run `python3 src/cli/compare_models.py rag --help` or
-`python3 src/cli/compare_models.py analyze --help` for parser-generated help.
-
 ## `src/cli/evaluate_retrieval.py`
 
-Runs every query in `data/retrieval_eval_queries.json` through the same tool
-planner used by `dream-analyzer ask`. The agent can generate semantic queries,
-use date filters, retrieve exact tags or date ranges, and call character or
-analytical tools. Each labeled query is first wrapped as an explicit dream-
-retrieval task, so a bare input such as `Priya` or `Kitchen C` cannot be mistaken
-for a request for background information or a final answer. The wrapper does not
-expose the query category, attributes, or relevance judgments. Results
-from dream-returning calls are combined with the same
-reciprocal-rank fusion used for answer synthesis. Exhaustive date and exact-tag
-sets are semantically reranked first; every match is retained, and unindexed
-matches are placed after indexed matches. Any `search_dreams` date bounds that
-are unsupported by the original evaluation query are removed before execution
-and identified in the tool trace. The final prose answer is not generated
-during evaluation. A fail-fast preflight first checks the Chroma path,
-collection, embedding-model metadata, and tool data files. Missing structured
-data is allowed and disables only `get_character_mentions`; a missing character
-dictionary similarly disables only `get_character_context`. Malformed optional
-data remains a preflight error. Tool or agent failures are marked as query errors
-and excluded from metric averages. The JSON and Markdown reports include the
-tool trace, recall and precision at 5 and 10, R-precision, macro and category
-averages, and the maximum possible precision at each cutoff based on the number
-of known relevant dreams.
+Runs a labeled query suite in `agent`, `embedding`, `bm25`, or `hybrid` mode and
+writes JSON and Markdown reports with precision, recall, R-precision, timing,
+errors, and category averages.
 
 Like the other commands, evaluation defaults to the user's ignored `data/`
 files: `dreams.jsonl`, `characters.json`, `retrieval_eval_queries.json`, and
@@ -597,17 +498,16 @@ python3 src/cli/evaluate_retrieval.py \
   --structured-dreams-path data/benchmark/structured_dreams.jsonl \
   --characters-path examples/characters.json \
   --chroma-path data/benchmark/chroma_db
+
+python3 src/cli/evaluate_retrieval.py \
+  --retrieval-mode bm25 \
+  --queries-path examples/retrieval_eval_queries.json \
+  --dreams-path examples/dreams.jsonl
 ```
 
-Agent retrieval is the default. The `embedding` mode provides a non-agentic
-baseline: it embeds each labeled query verbatim, retrieves `max(10, R)` results
-directly from Chroma, and never invokes the chat model or agent tools. It also
-does not require parsed, structured, or character data files.
-
-Each semantic search returns 10 dreams by default, and each query may use up to
-three tool calls. These settings can be changed with `--top-k` (10–20) and
-`--max-tool-calls`. Recall and R-precision are shown as `n/a` for queries with
-no known relevant dreams.
+Agent retrieval is the default. `embedding` searches Chroma directly, `bm25`
+searches only the JSONL supplied by `--dreams-path`, and `hybrid` combines the
+direct embedding and BM25 rankings.
 
 Arguments:
 
@@ -616,7 +516,8 @@ Arguments:
 - `--retrieval-mode`: retrieval implementation to benchmark: `agent`,
   `embedding`, `bm25`, or `hybrid`. Defaults to `agent`.
 - `--dreams-path`: parsed dream JSONL used by the agent, BM25, hybrid,
-  validation, and corpus fingerprinting. Defaults to `data/dreams.jsonl`.
+  validation, and corpus fingerprinting. In `bm25` mode, this file is the
+  complete searchable corpus. Defaults to `data/dreams.jsonl`.
 - `--structured-dreams-path`: structured feature JSONL used by the agent's
   character-mention tool. Defaults to
   `outputs/structured_dreams/dream_features.jsonl`.
@@ -647,13 +548,9 @@ Arguments:
 - `--rebuild-leaderboard`: rebuild leaderboard JSON and Markdown from existing
   benchmark reports without running a new evaluation.
 
-Every completed run updates `outputs/retrieval_evaluations/leaderboard.md` and
-its JSON counterpart. Within each query-suite and corpus group, runs are split
-into separate tables by their configured `--embed-model` and `--chat-model`.
-All query suites using the current parsed dream corpus stay in the current
-corpus section; only different or unknown corpus fingerprints are historical.
-Use `--rebuild-leaderboard` to regenerate both leaderboard files from existing
-benchmark JSON reports.
+Every completed run updates the JSON and Markdown leaderboards in
+`outputs/retrieval_evaluations/`. Use `--rebuild-leaderboard` to regenerate them
+from existing benchmark reports.
 
 ## `src/cli/evaluate_retrieval_llm.py`
 
@@ -680,13 +577,8 @@ python3 src/cli/evaluate_retrieval_llm.py \
   --top-k 8
 ```
 
-`--retrieval-metric` accepts `chroma`, `cosine`, or `both` and defaults to
-`chroma` for compatibility. In `both` mode the report contains four retrieval
-runs: two metrics for each embedding model. It reports shared top-k count,
-Jaccard overlap, metric-exclusive dream IDs, and the cosine-minus-Chroma change
-in mean LLM-judged relevance. All unique candidates are pooled and judged once,
-blind to retrieval metric and original rank, so shared dreams receive the same
-relevance score in both result lists.
+In `both` mode, the report compares Chroma and cosine results for each embedding
+model, including overlap and mean judged relevance.
 
 Use the complete text of an existing dream as the retrieval and relevance
 target. The target dream itself is excluded from the results:
@@ -721,19 +613,8 @@ python3 src/cli/evaluate_retrieval_llm.py \
   --generate-focus
 ```
 
-In all dream-ID modes, both embedding models search with the complete target
-dream text. Focus options affect only Gemma's evaluation. The evaluator pools
-and deduplicates both models' results, hides their source and rank, and has
-Gemma score every unique dream once. Focal relevance is the primary 1-5 score;
-generic overlap is reported separately and does not increase focal relevance.
-The JSON and Markdown reports include the complete target dream near the
-beginning, followed by the complete text of every retrieved dream.
-
-Unique candidates are judged in batches of 12 by default so a four-run metric
-comparison does not overfill one context window. Use `--judge-batch-size` to
-adjust this. Other useful options include `--retrieval-metric`, `--judge-model`,
-`--max-chars-per-dream`, `--max-target-chars`, `--num-ctx`, `--chroma-path`, and
-`--output-dir`.
+In dream-ID mode, retrieval always uses the complete target dream. Focus options
+change only the relevance criterion used by the judge.
 
 Arguments:
 
@@ -775,11 +656,6 @@ Uses structured Ollama output to extract grounded, descriptive fields from
 every dream and saves one JSON object per line to
 `outputs/structured_dreams/dream_features.jsonl`:
 
-The reusable schema, prompts, validation, record construction, selection/resume
-logic, and JSONL decoding live in `dream_analysis.structuring` behind
-`DreamStructuringService`. The CLI handles arguments, progress, failure
-reporting, and atomic checkpoint saves.
-
 ```bash
 python3 src/cli/structure_dreams.py
 ```
@@ -817,36 +693,8 @@ by the latest append-oriented journal import. Select another import entry with
 
 Existing dream IDs with the current schema version are skipped unless
 `--overwrite` is supplied; records from an older schema are regenerated
-automatically. Successful records are saved after each model response, so a
-long run can be resumed. If a model response fails application validation, the
-extractor makes one focused retry containing the rejected response and the
-validation error. A second invalid response is reported as a failure and is not
-saved. Connection and model-request failures are not retried by this mechanism.
-The output includes source metadata plus settings, characters, emotions, themes,
-objects, actions, sensory details, dream mechanics, tone,
-lucidity, violence, sexual content, social conflict, threat, agency,
-bizarreness, perspective, ending, memory quality, query-independent
-`retrieval_quality` from `0.0` to `1.0`, and a factual summary. Violence, sexual
-content, threat, social conflict, and bizarreness use `none`, `low`, `moderate`,
-and `high`. The retrieval-quality value is stored for future reranking but is
-not currently used by retrieval.
-
-A journal tag of `lucid` or `#lucid` requires `lucidity: true` and
-`lucidity_level: lucid`; contradictory model output enters the validation retry
-path. Without that tag, lucidity is determined from the report and may be true
-or false.
-
-`characters` contains unnamed roles, while `named_characters` contains only
-explicit proper names and preserves their capitalization. Both are produced in
-the same model call. Array sentinel values such as `none`, `unknown`, `unclear`,
-and `n/a` are discarded during validation. Duplicate array values are collapsed
-case-insensitively. Named-character values containing parentheses or brackets,
-beginning with `the`, `a`, `an`, or `my`, containing explanatory role language,
-forming an unusually long descriptive phrase, or matching a generic role are
-rejected and enter the validation retry path. The retry asks for only the
-explicit proper-name span, or for the source-backed unnamed role to be placed in
-`characters` when no name was given. Every named character must also occur in
-the source text after case-and-whitespace normalization.
+automatically. Successful records are saved after each model response so a long
+run can be resumed.
 
 ## `src/cli/build_character_lookup.py`
 
@@ -875,13 +723,9 @@ Arguments:
 - `--overwrite`: replace an existing lookup, including any manual edits. By
   default the command refuses to overwrite an existing output file.
 
-The default output is `data/characters.json`. Each entry includes the detected
-name, aliases, mention count, first and last mention dates, and contributing
-dream IDs. With temporal context, fill in or duplicate entries under
+Each entry includes the detected name, aliases, mention count, first and last
+mention dates, and contributing dream IDs. With temporal context, fill in or
+duplicate entries under
 `relationship_history`, using inclusive `start_date` and `end_date` values in
 `YYYY-MM-DD` format. Null boundaries mean open-ended. Without temporal context,
 fill in the single `relationship` and `context` fields.
-
-The script refuses to replace an existing lookup by default because it may
-contain manual edits. Use `--overwrite` only when you intentionally want to
-regenerate it.
