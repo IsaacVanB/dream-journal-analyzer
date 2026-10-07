@@ -18,6 +18,9 @@ from dream_analysis.structuring import (
     BOOLEAN_FIELDS,
     DEFAULT_STRUCTURING_MODEL,
     DREAM_FEATURE_SCHEMA,
+    EXTRACTION_VERSION,
+    FEATURE_GROUPS,
+    FEATURE_GROUP_VERSIONS,
     LEVELS,
     SCHEMA_VERSION,
     DreamStructuringService,
@@ -29,6 +32,8 @@ from dream_analysis.structuring import (
     select_dreams,
     select_pending_dreams,
     serialize_records,
+    stale_feature_groups,
+    update_record,
     validate_features,
 )
 
@@ -44,6 +49,9 @@ __all__ = [
     "ARRAY_FIELDS",
     "BOOLEAN_FIELDS",
     "DREAM_FEATURE_SCHEMA",
+    "EXTRACTION_VERSION",
+    "FEATURE_GROUPS",
+    "FEATURE_GROUP_VERSIONS",
     "LEVELS",
     "MODEL",
     "SCHEMA_VERSION",
@@ -57,6 +65,8 @@ __all__ = [
     "select_dreams",
     "select_pending_dreams",
     "serialize_records",
+    "stale_feature_groups",
+    "update_record",
     "validate_features",
 ]
 
@@ -121,6 +131,7 @@ def main() -> None:
         dreams,
         records,
         overwrite=args.overwrite,
+        model=args.model,
     )
     skipped = len(dreams) - len(pending)
     if not pending:
@@ -139,7 +150,11 @@ def main() -> None:
         dream_id = str(dream.get("dream_id", "<unknown>"))
         print(f"Structuring {index}/{len(pending)}: {dream_id}")
         try:
-            records[dream_id] = service.structure(dream)
+            records[dream_id] = service.structure(
+                dream,
+                records.get(dream_id),
+                overwrite=args.overwrite,
+            )
             save_records(args.output, records)
         except Exception as exc:
             failures += 1

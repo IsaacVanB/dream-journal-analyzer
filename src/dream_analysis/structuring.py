@@ -16,7 +16,10 @@ from dream_analysis.repository import DreamRepository
 
 
 DEFAULT_STRUCTURING_MODEL = "gemma3:12b"
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
+LEGACY_FEATURE_VERSION_SCHEMA = 13
+EXTRACTION_VERSION = 1
+LEGACY_EXTRACTION_VERSION = 1
 MAX_VALIDATION_ATTEMPTS = 2
 LEVELS = ["none", "low", "moderate", "high"]
 ARRAY_SENTINELS = frozenset(
@@ -161,6 +164,44 @@ DREAM_FEATURE_SCHEMA = {
     "additionalProperties": False,
 }
 
+# Fields in a group are regenerated together because they describe one concept or
+# participate in cross-field validation. To change an extraction definition,
+# increment only that group's version. Adding a field to a new or existing group
+# causes records missing that field to be backfilled without disturbing others.
+FEATURE_GROUPS: dict[str, tuple[str, ...]] = {
+    "scene": (
+        "setting",
+        "characters",
+        "named_characters",
+        "objects",
+        "sensory_details",
+    ),
+    "narrative": ("themes", "actions", "agency", "ending", "summary"),
+    "affect": ("emotions", "tone"),
+    "lucidity": ("lucidity", "lucidity_level"),
+    "content_intensity": (
+        "violence",
+        "sexual_content",
+        "social_conflict",
+        "threat_level",
+    ),
+    "dream_form": (
+        "dream_mechanics",
+        "bizarreness",
+        "perspective",
+        "memory_quality",
+    ),
+    "retrieval": ("retrieval_quality",),
+}
+FEATURE_GROUP_VERSIONS = {group: 1 for group in FEATURE_GROUPS}
+BASELINE_FEATURE_GROUP_VERSIONS = {group: 1 for group in FEATURE_GROUPS}
+
+_grouped_fields = [field for fields in FEATURE_GROUPS.values() for field in fields]
+if set(_grouped_fields) != set(DREAM_FEATURE_SCHEMA["properties"]) or len(
+    _grouped_fields
+) != len(set(_grouped_fields)):
+    raise RuntimeError("FEATURE_GROUPS must contain every feature field exactly once")
+
 ARRAY_FIELDS = {
     name
     for name, definition in DREAM_FEATURE_SCHEMA["properties"].items()
@@ -272,25 +313,93 @@ def select_dreams(
     return selected
 
 
+def _source_hash(dream: Mapping[str, Any]) -> str:
+    return dream_text_hash(str(dream.get("text", "")))
+
+
+def _stored_group_versions(record: Mapping[str, Any]) -> dict[str, int]:
+    versions = record.get("feature_group_versions")
+    if isinstance(versions, Mapping):
+        return {
+            str(group): version
+            for group, version in versions.items()
+            if type(version) is int
+        }
+    if record.get("schema_version") == LEGACY_FEATURE_VERSION_SCHEMA and all(
+        field in record for field in DREAM_FEATURE_SCHEMA["properties"]
+    ):
+        return dict(BASELINE_FEATURE_GROUP_VERSIONS)
+    return {}
+
+
+def stale_feature_groups(
+    dream: Mapping[str, Any],
+    existing_record: Mapping[str, Any] | None,
+    *,
+    overwrite: bool = False,
+    model: str | None = None,
+) -> list[str]:
+    """Return feature groups that require another model extraction."""
+    if existing_record is None or overwrite:
+        return list(FEATURE_GROUPS)
+    if existing_record.get("structured_text_hash") != _source_hash(dream):
+        return list(FEATURE_GROUPS)
+    if model is not None and existing_record.get("model") != model:
+        return list(FEATURE_GROUPS)
+    stored_extraction_version = existing_record.get("extraction_version")
+    if (
+        stored_extraction_version is None
+        and existing_record.get("schema_version") == LEGACY_FEATURE_VERSION_SCHEMA
+    ):
+        stored_extraction_version = LEGACY_EXTRACTION_VERSION
+    if stored_extraction_version != EXTRACTION_VERSION:
+        return list(FEATURE_GROUPS)
+
+    stored_versions = _stored_group_versions(existing_record)
+    stale = [
+        group
+        for group, fields in FEATURE_GROUPS.items()
+        if stored_versions.get(group) != FEATURE_GROUP_VERSIONS[group]
+        or any(field not in existing_record for field in fields)
+    ]
+    if _has_lucid_tag(dream.get("tags")) != _has_lucid_tag(
+        existing_record.get("journal_tags")
+    ) and "lucidity" not in stale:
+        stale.append("lucidity")
+    return stale
+
+
 def select_pending_dreams(
     dreams: Sequence[dict[str, Any]],
     existing_records: Mapping[str, Mapping[str, Any]],
     *,
     overwrite: bool = False,
     schema_version: int = SCHEMA_VERSION,
+    model: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return dreams requiring extraction under the requested resume policy."""
-    return [
-        dream
-        for dream in dreams
-        if overwrite
-        or dream.get("dream_id") not in existing_records
-        or existing_records[str(dream.get("dream_id"))].get("schema_version")
-        != schema_version
-    ]
+    pending: list[dict[str, Any]] = []
+    for dream in dreams:
+        existing = existing_records.get(str(dream.get("dream_id")))
+        if (
+            stale_feature_groups(
+                dream,
+                existing,
+                overwrite=overwrite,
+                model=model,
+            )
+            or existing is None
+            or existing.get("schema_version") != schema_version
+            or "feature_provenance" not in existing
+        ):
+            pending.append(dream)
+    return pending
 
 
-def build_extraction_messages(dream: Mapping[str, Any]) -> list[dict[str, str]]:
+def build_extraction_messages(
+    dream: Mapping[str, Any],
+    fields: Sequence[str] | None = None,
+) -> list[dict[str, str]]:
     """Build the grounded system and user messages for one dream."""
     text = dream.get("text")
     if not isinstance(text, str) or not text.strip():
@@ -304,6 +413,13 @@ def build_extraction_messages(dream: Mapping[str, Any]) -> list[dict[str, str]]:
         tags=", ".join(str(tag) for tag in dream.get("tags", [])) or "none",
         dream_text=text,
     )
+    if fields is not None:
+        user_prompt += (
+            "\nREQUESTED FIELDS:\n"
+            + ", ".join(fields)
+            + "\nReturn exactly these fields. Do not regenerate or return any "
+            "other fields.\n"
+        )
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
@@ -315,20 +431,26 @@ def validate_features(
     *,
     dream_text: str | None = None,
     dream_tags: Sequence[object] | None = None,
+    fields: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Validate and normalize a structured Ollama response."""
     if not isinstance(features, dict):
         raise ValueError("Structured features must be a JSON object.")
 
     normalized_features = dict(features)
-    required = set(DREAM_FEATURE_SCHEMA["required"])
+    required = set(
+        DREAM_FEATURE_SCHEMA["required"] if fields is None else fields
+    )
+    unknown_fields = required - set(DREAM_FEATURE_SCHEMA["properties"])
+    if unknown_fields:
+        raise ValueError(f"Unknown structured feature fields: {sorted(unknown_fields)}")
     actual = set(normalized_features)
     if missing := sorted(required - actual):
         raise ValueError(f"Structured response is missing fields: {missing}")
     if unexpected := sorted(actual - required):
         raise ValueError(f"Structured response has unexpected fields: {unexpected}")
 
-    for field in ARRAY_FIELDS:
+    for field in ARRAY_FIELDS & required:
         value = normalized_features[field]
         if not isinstance(value, list) or any(
             not isinstance(item, str) for item in value
@@ -351,7 +473,7 @@ def validate_features(
         normalized_features[field] = cleaned
 
     invalid_names: dict[str, list[str]] = {}
-    for character in normalized_features["named_characters"]:
+    for character in normalized_features.get("named_characters", []):
         if reasons := _named_character_rejection_reasons(character):
             invalid_names[character] = reasons
     if invalid_names:
@@ -364,7 +486,7 @@ def validate_features(
             f"invalid values: {details}"
         )
 
-    if dream_text is not None:
+    if dream_text is not None and "named_characters" in required:
         unsupported_names = [
             character
             for character in normalized_features["named_characters"]
@@ -376,11 +498,11 @@ def validate_features(
                 f"unsupported values: {unsupported_names}"
             )
 
-    for field in BOOLEAN_FIELDS:
+    for field in BOOLEAN_FIELDS & required:
         if type(normalized_features[field]) is not bool:
             raise ValueError(f"{field} must be a boolean.")
 
-    for field in NUMBER_FIELDS:
+    for field in NUMBER_FIELDS & required:
         value = normalized_features[field]
         definition = DREAM_FEATURE_SCHEMA["properties"][field]
         if (
@@ -395,6 +517,8 @@ def validate_features(
         normalized_features[field] = float(value)
 
     for field, definition in DREAM_FEATURE_SCHEMA["properties"].items():
+        if field not in required:
+            continue
         if field in ARRAY_FIELDS or field in BOOLEAN_FIELDS or field in NUMBER_FIELDS:
             continue
         value = normalized_features[field]
@@ -407,7 +531,7 @@ def validate_features(
             )
         normalized_features[field] = value
 
-    if _has_lucid_tag(dream_tags) and (
+    if {"lucidity", "lucidity_level"}.issubset(required) and _has_lucid_tag(dream_tags) and (
         normalized_features["lucidity"] is not True
         or normalized_features["lucidity_level"] != "lucid"
     ):
@@ -416,7 +540,7 @@ def validate_features(
             "lucidity_level 'lucid'."
         )
 
-    if normalized_features["lucidity"] != (
+    if {"lucidity", "lucidity_level"}.issubset(required) and normalized_features["lucidity"] != (
         normalized_features["lucidity_level"] == "lucid"
     ):
         raise ValueError(
@@ -465,11 +589,30 @@ def extract_features(
     model: str = DEFAULT_STRUCTURING_MODEL,
     num_ctx: int = 8192,
     gateway: OllamaGateway | None = None,
+    fields: Sequence[str] | None = None,
+    existing_features: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Extract and validate structured features for one dream."""
     if num_ctx < 1:
         raise ValueError("num_ctx must be positive")
-    messages = build_extraction_messages(dream)
+    selected_fields = tuple(
+        DREAM_FEATURE_SCHEMA["required"] if fields is None else fields
+    )
+    if not selected_fields:
+        return {}
+    selected_schema = {
+        "type": "object",
+        "properties": {
+            field: DREAM_FEATURE_SCHEMA["properties"][field]
+            for field in selected_fields
+        },
+        "required": list(selected_fields),
+        "additionalProperties": False,
+    }
+    messages = build_extraction_messages(
+        dream,
+        None if fields is None else selected_fields,
+    )
     ollama = gateway or OllamaGateway()
     options = {
         "temperature": 0,
@@ -480,14 +623,14 @@ def extract_features(
     dream_tags = dream.get("tags")
     for attempt in range(MAX_VALIDATION_ATTEMPTS):
         features = ollama.chat_json(
-            schema=DREAM_FEATURE_SCHEMA,
+            schema=selected_schema,
             model=model,
             messages=messages,
             think=False,
             options=options,
         )
         try:
-            return validate_features(
+            validated = validate_features(
                 features,
                 dream_text=dream_text if isinstance(dream_text, str) else None,
                 dream_tags=(
@@ -496,7 +639,23 @@ def extract_features(
                     and not isinstance(dream_tags, (str, bytes))
                     else None
                 ),
+                fields=selected_fields,
             )
+            if existing_features is not None:
+                merged = dict(existing_features)
+                merged.update(validated)
+                merged = validate_features(
+                    merged,
+                    dream_text=dream_text if isinstance(dream_text, str) else None,
+                    dream_tags=(
+                        dream_tags
+                        if isinstance(dream_tags, Sequence)
+                        and not isinstance(dream_tags, (str, bytes))
+                        else None
+                    ),
+                )
+                return {field: merged[field] for field in selected_fields}
+            return validated
         except ValueError as exc:
             if attempt + 1 == MAX_VALIDATION_ATTEMPTS:
                 raise ValueError(
@@ -517,18 +676,79 @@ def build_record(
 ) -> dict[str, Any]:
     """Combine source metadata and extracted features into a versioned record."""
     timestamp = extracted_at or datetime.now().astimezone()
+    timestamp_text = timestamp.isoformat(timespec="seconds")
     return {
         "dream_id": dream.get("dream_id"),
         "date": dream.get("date"),
         "date_sort": dream.get("date_sort"),
         "journal_tags": dream.get("tags", []),
         "source_word_count": dream.get("word_count"),
-        "structured_text_hash": dream_text_hash(str(dream.get("text", ""))),
+        "structured_text_hash": _source_hash(dream),
         "schema_version": SCHEMA_VERSION,
+        "extraction_version": EXTRACTION_VERSION,
         "model": model,
-        "extracted_at": timestamp.isoformat(timespec="seconds"),
+        "extracted_at": timestamp_text,
+        "feature_group_versions": dict(FEATURE_GROUP_VERSIONS),
+        "feature_provenance": {
+            group: {"model": model, "extracted_at": timestamp_text}
+            for group in FEATURE_GROUPS
+        },
         **dict(features),
     }
+
+
+def update_record(
+    dream: Mapping[str, Any],
+    existing_record: Mapping[str, Any],
+    features: Mapping[str, Any],
+    refreshed_groups: Sequence[str],
+    *,
+    model: str,
+    extracted_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Merge selectively refreshed groups into a backward-compatible record."""
+    timestamp = extracted_at or datetime.now().astimezone()
+    timestamp_text = timestamp.isoformat(timespec="seconds")
+    record = dict(existing_record)
+    latest_extracted_at = (
+        timestamp_text
+        if refreshed_groups
+        else existing_record.get("extracted_at", timestamp_text)
+    )
+    record.update(
+        {
+            "dream_id": dream.get("dream_id"),
+            "date": dream.get("date"),
+            "date_sort": dream.get("date_sort"),
+            "journal_tags": dream.get("tags", []),
+            "source_word_count": dream.get("word_count"),
+            "structured_text_hash": _source_hash(dream),
+            "schema_version": SCHEMA_VERSION,
+            "extraction_version": EXTRACTION_VERSION,
+            "model": model,
+            "extracted_at": latest_extracted_at,
+        }
+    )
+    record.update(features)
+
+    versions = _stored_group_versions(existing_record)
+    provenance = existing_record.get("feature_provenance")
+    provenance = dict(provenance) if isinstance(provenance, Mapping) else {}
+    legacy_model = existing_record.get("model", model)
+    legacy_extracted_at = existing_record.get("extracted_at", timestamp_text)
+    for group in FEATURE_GROUPS:
+        if group in refreshed_groups or group not in versions:
+            versions[group] = FEATURE_GROUP_VERSIONS[group]
+        if group in refreshed_groups:
+            provenance[group] = {"model": model, "extracted_at": timestamp_text}
+        elif group not in provenance:
+            provenance[group] = {
+                "model": legacy_model,
+                "extracted_at": legacy_extracted_at,
+            }
+    record["feature_group_versions"] = versions
+    record["feature_provenance"] = provenance
+    return record
 
 
 def load_existing_records(path: Path | str) -> dict[str, dict[str, Any]]:
@@ -590,6 +810,41 @@ class DreamStructuringService:
             gateway=self.ollama,
         )
 
-    def structure(self, dream: Mapping[str, Any]) -> dict[str, Any]:
-        features = self.extract_features(dream)
-        return build_record(dream, features, model=self.model)
+    def structure(
+        self,
+        dream: Mapping[str, Any],
+        existing_record: Mapping[str, Any] | None = None,
+        *,
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        groups = stale_feature_groups(
+            dream,
+            existing_record,
+            overwrite=overwrite,
+            model=self.model,
+        )
+        if existing_record is None:
+            features = self.extract_features(dream)
+            return build_record(dream, features, model=self.model)
+
+        fields = tuple(field for group in groups for field in FEATURE_GROUPS[group])
+        existing_features = {
+            field: existing_record[field]
+            for field in DREAM_FEATURE_SCHEMA["properties"]
+            if field in existing_record
+        }
+        features = extract_features(
+            dream,
+            model=self.model,
+            num_ctx=self.num_ctx,
+            gateway=self.ollama,
+            fields=fields,
+            existing_features=existing_features,
+        )
+        return update_record(
+            dream,
+            existing_record,
+            features,
+            groups,
+            model=self.model,
+        )

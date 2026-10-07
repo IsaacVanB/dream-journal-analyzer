@@ -691,10 +691,21 @@ Arguments:
 by the latest append-oriented journal import. Select another import entry with
 `--import-id`, or another state file with `--import-state`.
 
-Existing dream IDs with the current schema version are skipped unless
-`--overwrite` is supplied; records from an older schema are regenerated
-automatically. Successful records are saved after each model response so a long
-run can be resumed.
+Existing dream IDs with current feature-group versions are skipped unless
+`--overwrite` is supplied. When a schema change affects only one feature group,
+only that group is sent to the model and its result is merged into the existing
+record. Source-text changes, model changes, and `--overwrite` regenerate every
+group. Records from schema version 13 are migrated to group-version metadata
+without unnecessary model calls when their source and model are unchanged.
+Successful records are saved after each update so a long run can be resumed.
+
+Each record stores `feature_group_versions` and per-group model/timestamp data in
+`feature_provenance`. Increment the corresponding entry in
+`FEATURE_GROUP_VERSIONS` when extraction semantics change. Fields in the same
+group, including `lucidity` and `lucidity_level`, are always regenerated
+together. Increment `EXTRACTION_VERSION` for a global prompt or extraction-policy
+change that should regenerate all groups. `SCHEMA_VERSION` now versions the
+record envelope and does not by itself trigger model calls.
 
 ## `src/cli/build_character_lookup.py`
 

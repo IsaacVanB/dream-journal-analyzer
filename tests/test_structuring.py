@@ -5,9 +5,14 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from dream_analysis.structuring import (
     DREAM_FEATURE_SCHEMA,
+    EXTRACTION_VERSION,
+    FEATURE_GROUPS,
+    FEATURE_GROUP_VERSIONS,
+    LEGACY_FEATURE_VERSION_SCHEMA,
     SCHEMA_VERSION,
     DreamStructuringService,
     build_extraction_messages,
@@ -15,6 +20,7 @@ from dream_analysis.structuring import (
     load_existing_records,
     select_pending_dreams,
     serialize_records,
+    stale_feature_groups,
     validate_features,
 )
 
@@ -395,19 +401,122 @@ class DreamStructuringTests(unittest.TestCase):
                     validate_features(features)
 
     def test_pending_selection_respects_version_and_overwrite(self) -> None:
-        dreams = [{"dream_id": "current"}, {"dream_id": "stale"}]
+        dreams = [
+            {"dream_id": "current", "text": "Current dream."},
+            {"dream_id": "stale", "text": "Stale dream."},
+        ]
         existing = {
-            "current": {"schema_version": SCHEMA_VERSION},
-            "stale": {"schema_version": SCHEMA_VERSION - 1},
+            "current": build_record(
+                dreams[0], valid_features(), model="feature-model"
+            ),
+            "stale": build_record(
+                dreams[1], valid_features(), model="feature-model"
+            ),
         }
+        existing["stale"]["feature_group_versions"]["retrieval"] = 0
 
         self.assertEqual(
-            select_pending_dreams(dreams, existing),
-            [{"dream_id": "stale"}],
+            select_pending_dreams(dreams, existing, model="feature-model"),
+            [dreams[1]],
         )
         self.assertEqual(
             select_pending_dreams(dreams, existing, overwrite=True),
             dreams,
+        )
+
+    def test_selective_refresh_requests_only_stale_group(self) -> None:
+        dream = {"dream_id": "one", "text": "I found a hidden room."}
+        existing = build_record(dream, valid_features(), model="feature-model")
+        existing["themes"] = ["original theme"]
+        gateway = FakeGateway({"retrieval_quality": 0.9})
+        service = DreamStructuringService(
+            ollama_gateway=gateway,
+            model="feature-model",
+        )
+
+        with patch.dict(FEATURE_GROUP_VERSIONS, {"retrieval": 2}):
+            record = service.structure(dream, existing)
+
+        self.assertEqual(len(gateway.calls), 1)
+        self.assertEqual(
+            gateway.calls[0]["schema"]["required"],
+            ["retrieval_quality"],
+        )
+        self.assertEqual(record["retrieval_quality"], 0.9)
+        self.assertEqual(record["themes"], ["original theme"])
+        self.assertEqual(record["feature_group_versions"]["retrieval"], 2)
+
+    def test_source_or_model_change_requires_every_group(self) -> None:
+        dream = {"dream_id": "one", "text": "Original dream."}
+        existing = build_record(dream, valid_features(), model="old-model")
+
+        changed_text = {"dream_id": "one", "text": "Changed dream."}
+        self.assertEqual(
+            stale_feature_groups(changed_text, existing, model="old-model"),
+            list(FEATURE_GROUPS),
+        )
+        self.assertEqual(
+            stale_feature_groups(dream, existing, model="new-model"),
+            list(FEATURE_GROUPS),
+        )
+
+    def test_global_extraction_version_change_requires_every_group(self) -> None:
+        dream = {"dream_id": "one", "text": "Original dream."}
+        existing = build_record(dream, valid_features(), model="feature-model")
+
+        with patch(
+            "dream_analysis.structuring.EXTRACTION_VERSION",
+            EXTRACTION_VERSION + 1,
+        ):
+            stale = stale_feature_groups(
+                dream,
+                existing,
+                model="feature-model",
+            )
+
+        self.assertEqual(stale, list(FEATURE_GROUPS))
+
+    def test_lucid_tag_change_refreshes_only_lucidity_group(self) -> None:
+        dream = {
+            "dream_id": "one",
+            "text": "I knew that I was dreaming.",
+            "tags": [],
+        }
+        existing = build_record(dream, valid_features(), model="feature-model")
+        dream["tags"] = ["lucid"]
+
+        self.assertEqual(
+            stale_feature_groups(dream, existing, model="feature-model"),
+            ["lucidity"],
+        )
+
+    def test_schema_13_record_migrates_metadata_without_model_call(self) -> None:
+        timestamp = datetime(2024, 2, 3, 4, 5, tzinfo=timezone.utc)
+        dream = {"dream_id": "one", "text": "A complete old record."}
+        existing = build_record(
+            dream,
+            valid_features(),
+            model="feature-model",
+            extracted_at=timestamp,
+        )
+        existing["schema_version"] = LEGACY_FEATURE_VERSION_SCHEMA
+        del existing["feature_group_versions"]
+        del existing["feature_provenance"]
+        del existing["extraction_version"]
+        gateway = FakeGateway({})
+        service = DreamStructuringService(
+            ollama_gateway=gateway,
+            model="feature-model",
+        )
+
+        record = service.structure(dream, existing)
+
+        self.assertEqual(gateway.calls, [])
+        self.assertEqual(record["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(record["feature_group_versions"], FEATURE_GROUP_VERSIONS)
+        self.assertEqual(
+            record["feature_provenance"]["scene"]["extracted_at"],
+            "2024-02-03T04:05:00+00:00",
         )
 
     def test_existing_jsonl_loading_and_serialization_preserve_order(self) -> None:
