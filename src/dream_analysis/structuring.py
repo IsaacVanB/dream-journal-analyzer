@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import math
 import re
 from datetime import datetime
 from pathlib import Path
@@ -16,7 +15,7 @@ from dream_analysis.repository import DreamRepository
 
 
 DEFAULT_STRUCTURING_MODEL = "gemma3:12b"
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 LEGACY_FEATURE_VERSION_SCHEMA = 13
 EXTRACTION_VERSION = 1
 LEGACY_EXTRACTION_VERSION = 1
@@ -85,6 +84,14 @@ GENERIC_PERSON_NOUNS = frozenset(
 )
 MAX_NAMED_CHARACTER_WORDS = 5
 MAX_NAMED_CHARACTER_CHARS = 60
+RETRIEVAL_COMPONENT_FIELD = "retrieval_quality_components"
+RETRIEVAL_COMPONENTS = (
+    "specificity",
+    "coherence",
+    "distinctiveness",
+    "evidence_density",
+)
+RETRIEVAL_COMPONENT_MAX = 4
 
 DREAM_FEATURE_SCHEMA = {
     "type": "object",
@@ -125,14 +132,18 @@ DREAM_FEATURE_SCHEMA = {
             "type": "string",
             "enum": ["fragmentary", "partial", "detailed"],
         },
-        "retrieval_quality": {
-            "type": "number",
-            "minimum": 0.0,
-            "maximum": 1.0,
-            "description": (
-                "Query-independent estimate of how much specific, coherent, "
-                "and distinctive evidence the report offers for retrieval."
-            ),
+        RETRIEVAL_COMPONENT_FIELD: {
+            "type": "object",
+            "properties": {
+                component: {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": RETRIEVAL_COMPONENT_MAX,
+                }
+                for component in RETRIEVAL_COMPONENTS
+            },
+            "required": list(RETRIEVAL_COMPONENTS),
+            "additionalProperties": False,
         },
         "summary": {"type": "string"},
     },
@@ -158,7 +169,7 @@ DREAM_FEATURE_SCHEMA = {
         "perspective",
         "ending",
         "memory_quality",
-        "retrieval_quality",
+        RETRIEVAL_COMPONENT_FIELD,
         "summary",
     ],
     "additionalProperties": False,
@@ -191,10 +202,16 @@ FEATURE_GROUPS: dict[str, tuple[str, ...]] = {
         "perspective",
         "memory_quality",
     ),
+    "retrieval": (RETRIEVAL_COMPONENT_FIELD,),
+}
+FEATURE_GROUP_VERSIONS = {
+    group: 2 if group == "retrieval" else 1
+    for group in FEATURE_GROUPS
+}
+BASELINE_FEATURE_GROUP_VERSIONS = {group: 1 for group in FEATURE_GROUPS}
+DERIVED_FEATURE_GROUPS: dict[str, tuple[str, ...]] = {
     "retrieval": ("retrieval_quality",),
 }
-FEATURE_GROUP_VERSIONS = {group: 1 for group in FEATURE_GROUPS}
-BASELINE_FEATURE_GROUP_VERSIONS = {group: 1 for group in FEATURE_GROUPS}
 
 _grouped_fields = [field for fields in FEATURE_GROUPS.values() for field in fields]
 if set(_grouped_fields) != set(DREAM_FEATURE_SCHEMA["properties"]) or len(
@@ -208,7 +225,7 @@ ARRAY_FIELDS = {
     if definition["type"] == "array"
 }
 BOOLEAN_FIELDS = {"lucidity"}
-NUMBER_FIELDS = {"retrieval_quality"}
+OBJECT_FIELDS = {RETRIEVAL_COMPONENT_FIELD}
 
 SYSTEM_PROMPT = STRUCTURING_SYSTEM_PROMPT
 
@@ -295,6 +312,41 @@ def _has_lucid_tag(tags: Sequence[object] | None) -> bool:
     return False
 
 
+def _validate_retrieval_components(value: Any) -> dict[str, int]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{RETRIEVAL_COMPONENT_FIELD} must be an object.")
+    expected = set(RETRIEVAL_COMPONENTS)
+    actual = set(value)
+    if missing := sorted(expected - actual):
+        raise ValueError(
+            f"{RETRIEVAL_COMPONENT_FIELD} is missing components: {missing}"
+        )
+    if unexpected := sorted(actual - expected):
+        raise ValueError(
+            f"{RETRIEVAL_COMPONENT_FIELD} has unexpected components: "
+            f"{unexpected}"
+        )
+    normalized: dict[str, int] = {}
+    for component in RETRIEVAL_COMPONENTS:
+        score = value[component]
+        if type(score) is not int or not 0 <= score <= RETRIEVAL_COMPONENT_MAX:
+            raise ValueError(
+                f"{RETRIEVAL_COMPONENT_FIELD}.{component} must be an integer "
+                f"between 0 and {RETRIEVAL_COMPONENT_MAX}."
+            )
+        normalized[component] = score
+    return normalized
+
+
+def _retrieval_quality(components: Mapping[str, int]) -> float:
+    maximum = len(RETRIEVAL_COMPONENTS) * RETRIEVAL_COMPONENT_MAX
+    return round(
+        sum(components[component] for component in RETRIEVAL_COMPONENTS)
+        / maximum,
+        4,
+    )
+
+
 def load_dreams(path: Path | str) -> list[dict[str, Any]]:
     """Load validated dream records for feature extraction."""
     return DreamRepository(path).records()
@@ -325,8 +377,13 @@ def _stored_group_versions(record: Mapping[str, Any]) -> dict[str, int]:
             for group, version in versions.items()
             if type(version) is int
         }
+    legacy_fields = (
+        set(DREAM_FEATURE_SCHEMA["properties"])
+        - {RETRIEVAL_COMPONENT_FIELD}
+        | {"retrieval_quality"}
+    )
     if record.get("schema_version") == LEGACY_FEATURE_VERSION_SCHEMA and all(
-        field in record for field in DREAM_FEATURE_SCHEMA["properties"]
+        field in record for field in legacy_fields
     ):
         return dict(BASELINE_FEATURE_GROUP_VERSIONS)
     return {}
@@ -361,6 +418,10 @@ def stale_feature_groups(
         for group, fields in FEATURE_GROUPS.items()
         if stored_versions.get(group) != FEATURE_GROUP_VERSIONS[group]
         or any(field not in existing_record for field in fields)
+        or any(
+            field not in existing_record
+            for field in DERIVED_FEATURE_GROUPS.get(group, ())
+        )
     ]
     if _has_lucid_tag(dream.get("tags")) != _has_lucid_tag(
         existing_record.get("journal_tags")
@@ -502,24 +563,17 @@ def validate_features(
         if type(normalized_features[field]) is not bool:
             raise ValueError(f"{field} must be a boolean.")
 
-    for field in NUMBER_FIELDS & required:
-        value = normalized_features[field]
-        definition = DREAM_FEATURE_SCHEMA["properties"][field]
-        if (
-            type(value) not in (int, float)
-            or not math.isfinite(value)
-            or not definition["minimum"] <= value <= definition["maximum"]
-        ):
-            raise ValueError(
-                f"{field} must be a finite number between "
-                f"{definition['minimum']} and {definition['maximum']}."
-            )
-        normalized_features[field] = float(value)
+    if RETRIEVAL_COMPONENT_FIELD in required:
+        components = _validate_retrieval_components(
+            normalized_features[RETRIEVAL_COMPONENT_FIELD]
+        )
+        normalized_features[RETRIEVAL_COMPONENT_FIELD] = components
+        normalized_features["retrieval_quality"] = _retrieval_quality(components)
 
     for field, definition in DREAM_FEATURE_SCHEMA["properties"].items():
         if field not in required:
             continue
-        if field in ARRAY_FIELDS or field in BOOLEAN_FIELDS or field in NUMBER_FIELDS:
+        if field in ARRAY_FIELDS or field in BOOLEAN_FIELDS or field in OBJECT_FIELDS:
             continue
         value = normalized_features[field]
         if not isinstance(value, str) or not value.strip():
@@ -643,7 +697,12 @@ def extract_features(
             )
             if existing_features is not None:
                 merged = dict(existing_features)
-                merged.update(validated)
+                merged.update(
+                    {
+                        field: validated[field]
+                        for field in selected_fields
+                    }
+                )
                 merged = validate_features(
                     merged,
                     dream_text=dream_text if isinstance(dream_text, str) else None,
@@ -654,7 +713,13 @@ def extract_features(
                         else None
                     ),
                 )
-                return {field: merged[field] for field in selected_fields}
+                refreshed = {
+                    field: merged[field]
+                    for field in selected_fields
+                }
+                if RETRIEVAL_COMPONENT_FIELD in selected_fields:
+                    refreshed["retrieval_quality"] = merged["retrieval_quality"]
+                return refreshed
             return validated
         except ValueError as exc:
             if attempt + 1 == MAX_VALIDATION_ATTEMPTS:
@@ -677,7 +742,7 @@ def build_record(
     """Combine source metadata and extracted features into a versioned record."""
     timestamp = extracted_at or datetime.now().astimezone()
     timestamp_text = timestamp.isoformat(timespec="seconds")
-    return {
+    record = {
         "dream_id": dream.get("dream_id"),
         "date": dream.get("date"),
         "date_sort": dream.get("date_sort"),
@@ -695,6 +760,10 @@ def build_record(
         },
         **dict(features),
     }
+    components = record.get(RETRIEVAL_COMPONENT_FIELD)
+    if isinstance(components, Mapping):
+        record["retrieval_quality"] = _retrieval_quality(components)
+    return record
 
 
 def update_record(
@@ -730,6 +799,9 @@ def update_record(
         }
     )
     record.update(features)
+    components = record.get(RETRIEVAL_COMPONENT_FIELD)
+    if isinstance(components, Mapping):
+        record["retrieval_quality"] = _retrieval_quality(components)
 
     versions = _stored_group_versions(existing_record)
     provenance = existing_record.get("feature_provenance")

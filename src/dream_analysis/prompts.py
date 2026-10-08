@@ -255,19 +255,26 @@ Extraction guidance:
 - `perspective`: first_person, third_person, mixed, or unclear.
 - `ending`: resolved, unresolved, interrupted, or unclear.
 - `memory_quality`: fragmentary, partial, or detailed based on the report itself.
-- `retrieval_quality`: a query-independent number from 0.0 to 1.0 estimating
-  how much specific, coherent, and distinctive evidence the report offers for
-  later retrieval. Use these anchors, interpolating between them when needed:
-  0.0 = no discernible event, image, character, or situation;
-  0.25 = a vague fragment with very little searchable information;
-  0.5 = understandable but sparse, scattered, or generic;
-  0.75 = a coherent central event with several specific details;
-  1.0 = highly coherent, distinctive, focused, and information-rich.
-  Do not predict relevance to any particular future query or interpret the
-  dream's psychological importance. Length should contribute only weakly: a
-  short report with a distinctive event and concrete details can score highly.
-  Do not penalize coherent reports merely because their events are bizarre or
-  impossible.
+- `retrieval_quality_components`: four independent integer scores from 0 to 4.
+  The application combines them deterministically; do not return an overall
+  retrieval-quality score. Judge only evidence present in this report:
+  - `specificity`: 0 for no concrete information; 1 for almost entirely generic
+    content; 2 for some concrete identification or detail; 3 for several precise
+    details; 4 for unusually precise people, places, objects, actions, or sensory
+    details.
+  - `coherence`: 0 when no event or situation is discernible; 1 for isolated or
+    disconnected fragments; 2 for a partially understandable situation; 3 for
+    a clear central event; 4 for a focused, well-developed sequence or situation.
+  - `distinctiveness`: 0 for no usable content; 1 for wholly commonplace and
+    generic material; 2 for some identifiable features; 3 for notably unusual
+    or discriminating features; 4 for highly distinctive evidence unlikely to
+    match many other reports.
+  - `evidence_density`: 0 for no searchable evidence; 1 for one usable detail;
+    2 for a few usable details; 3 for several details across multiple feature
+    types; 4 for abundant concrete evidence without relying on repetition.
+  Do not predict relevance to a particular future query or interpret the dream's
+  psychological importance. Length should contribute only weakly, and bizarre or
+  impossible events are not inherently lower quality.
 - `summary`: one or two factual sentences covering the central events.
 """
 

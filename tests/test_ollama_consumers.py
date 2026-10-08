@@ -39,8 +39,11 @@ def valid_features() -> dict:
             features[name] = []
         elif definition["type"] == "boolean":
             features[name] = False
-        elif definition["type"] == "number":
-            features[name] = 0.5
+        elif definition["type"] == "object":
+            features[name] = {
+                component: 2
+                for component in definition["required"]
+            }
         elif "enum" in definition:
             features[name] = definition["enum"][0]
         else:

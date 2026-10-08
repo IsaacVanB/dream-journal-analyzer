@@ -707,6 +707,14 @@ together. Increment `EXTRACTION_VERSION` for a global prompt or extraction-polic
 change that should regenerate all groups. `SCHEMA_VERSION` now versions the
 record envelope and does not by itself trigger model calls.
 
+Retrieval quality is model-rated through four independent integer components
+from `0` to `4`: specificity, coherence, distinctiveness, and evidence density.
+The record retains these values in `retrieval_quality_components`. The
+application computes the stored `retrieval_quality` deterministically as their
+equally weighted sum divided by `16`, producing values from `0.0` to `1.0` in
+increments of `0.0625`. It is stored for future reranking but is not currently
+used by retrieval.
+
 ## `src/cli/build_character_lookup.py`
 
 Aggregates `named_characters` from structured dream records and creates a

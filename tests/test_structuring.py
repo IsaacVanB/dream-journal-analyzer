@@ -32,8 +32,11 @@ def valid_features() -> dict:
             features[name] = []
         elif definition["type"] == "boolean":
             features[name] = False
-        elif definition["type"] == "number":
-            features[name] = 0.5
+        elif definition["type"] == "object":
+            features[name] = {
+                component: 2
+                for component in definition["required"]
+            }
         elif "enum" in definition:
             features[name] = definition["enum"][0]
         else:
@@ -379,25 +382,48 @@ class DreamStructuringTests(unittest.TestCase):
         self.assertIn("Threat can be high even when no", prompt)
         self.assertIn("absence of that tag does not imply", prompt)
 
-    def test_validation_normalizes_retrieval_quality_to_float(self) -> None:
+    def test_validation_computes_retrieval_quality_from_components(self) -> None:
         features = valid_features()
-        features["retrieval_quality"] = 1
+        features["retrieval_quality_components"] = {
+            "specificity": 4,
+            "coherence": 3,
+            "distinctiveness": 2,
+            "evidence_density": 1,
+        }
 
         normalized = validate_features(features)
 
-        self.assertEqual(normalized["retrieval_quality"], 1.0)
+        self.assertEqual(normalized["retrieval_quality"], 0.625)
         self.assertIs(type(normalized["retrieval_quality"]), float)
+        self.assertEqual(
+            normalized["retrieval_quality_components"],
+            features["retrieval_quality_components"],
+        )
 
-    def test_validation_rejects_invalid_retrieval_quality_values(self) -> None:
-        for invalid_score in (-0.1, 1.1, True, "0.5", float("nan")):
+    def test_validation_rejects_invalid_retrieval_component_values(self) -> None:
+        for invalid_score in (-1, 5, True, 2.5, "2"):
             with self.subTest(invalid_score=invalid_score):
                 features = valid_features()
-                features["retrieval_quality"] = invalid_score
+                features["retrieval_quality_components"]["specificity"] = (
+                    invalid_score
+                )
 
                 with self.assertRaisesRegex(
                     ValueError,
-                    "retrieval_quality must be a finite number between 0.0 and 1.0",
+                    "retrieval_quality_components.specificity must be an integer",
                 ):
+                    validate_features(features)
+
+    def test_validation_rejects_missing_or_extra_retrieval_components(self) -> None:
+        for mutation, message in (
+            (lambda value: value.pop("coherence"), "missing components"),
+            (lambda value: value.update({"importance": 4}), "unexpected components"),
+        ):
+            with self.subTest(message=message):
+                features = valid_features()
+                mutation(features["retrieval_quality_components"])
+
+                with self.assertRaisesRegex(ValueError, message):
                     validate_features(features)
 
     def test_pending_selection_respects_version_and_overwrite(self) -> None:
@@ -428,23 +454,41 @@ class DreamStructuringTests(unittest.TestCase):
         dream = {"dream_id": "one", "text": "I found a hidden room."}
         existing = build_record(dream, valid_features(), model="feature-model")
         existing["themes"] = ["original theme"]
-        gateway = FakeGateway({"retrieval_quality": 0.9})
+        gateway = FakeGateway(
+            {
+                "retrieval_quality_components": {
+                    "specificity": 4,
+                    "coherence": 3,
+                    "distinctiveness": 4,
+                    "evidence_density": 3,
+                }
+            }
+        )
         service = DreamStructuringService(
             ollama_gateway=gateway,
             model="feature-model",
         )
 
-        with patch.dict(FEATURE_GROUP_VERSIONS, {"retrieval": 2}):
+        with patch.dict(FEATURE_GROUP_VERSIONS, {"retrieval": 3}):
             record = service.structure(dream, existing)
 
         self.assertEqual(len(gateway.calls), 1)
         self.assertEqual(
             gateway.calls[0]["schema"]["required"],
-            ["retrieval_quality"],
+            ["retrieval_quality_components"],
         )
-        self.assertEqual(record["retrieval_quality"], 0.9)
+        self.assertEqual(record["retrieval_quality"], 0.875)
+        self.assertEqual(
+            record["retrieval_quality_components"],
+            {
+                "specificity": 4,
+                "coherence": 3,
+                "distinctiveness": 4,
+                "evidence_density": 3,
+            },
+        )
         self.assertEqual(record["themes"], ["original theme"])
-        self.assertEqual(record["feature_group_versions"]["retrieval"], 2)
+        self.assertEqual(record["feature_group_versions"]["retrieval"], 3)
 
     def test_source_or_model_change_requires_every_group(self) -> None:
         dream = {"dream_id": "one", "text": "Original dream."}
@@ -490,7 +534,7 @@ class DreamStructuringTests(unittest.TestCase):
             ["lucidity"],
         )
 
-    def test_schema_13_record_migrates_metadata_without_model_call(self) -> None:
+    def test_schema_13_record_refreshes_only_new_retrieval_components(self) -> None:
         timestamp = datetime(2024, 2, 3, 4, 5, tzinfo=timezone.utc)
         dream = {"dream_id": "one", "text": "A complete old record."}
         existing = build_record(
@@ -503,7 +547,18 @@ class DreamStructuringTests(unittest.TestCase):
         del existing["feature_group_versions"]
         del existing["feature_provenance"]
         del existing["extraction_version"]
-        gateway = FakeGateway({})
+        del existing["retrieval_quality_components"]
+        existing["retrieval_quality"] = 0.75
+        gateway = FakeGateway(
+            {
+                "retrieval_quality_components": {
+                    "specificity": 3,
+                    "coherence": 3,
+                    "distinctiveness": 2,
+                    "evidence_density": 3,
+                }
+            }
+        )
         service = DreamStructuringService(
             ollama_gateway=gateway,
             model="feature-model",
@@ -511,9 +566,14 @@ class DreamStructuringTests(unittest.TestCase):
 
         record = service.structure(dream, existing)
 
-        self.assertEqual(gateway.calls, [])
+        self.assertEqual(len(gateway.calls), 1)
+        self.assertEqual(
+            gateway.calls[0]["schema"]["required"],
+            ["retrieval_quality_components"],
+        )
         self.assertEqual(record["schema_version"], SCHEMA_VERSION)
         self.assertEqual(record["feature_group_versions"], FEATURE_GROUP_VERSIONS)
+        self.assertEqual(record["retrieval_quality"], 0.6875)
         self.assertEqual(
             record["feature_provenance"]["scene"]["extracted_at"],
             "2024-02-03T04:05:00+00:00",
