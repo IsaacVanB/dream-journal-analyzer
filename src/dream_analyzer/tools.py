@@ -1,21 +1,21 @@
 """Public compatibility facade for dream-agent tools.
 
-Implementations live in focused modules; imports from dream_analysis.tools
+Implementations live in focused modules; imports from dream_analyzer.tools
 remain supported.
 """
 
-from dream_analysis.analytics_tools import DreamStatisticsTool, TagTrendTool
-from dream_analysis.character_tools import (
+from dream_analyzer.analytics_tools import DreamStatisticsTool, TagTrendTool
+from dream_analyzer.character_tools import (
     CharacterContextTool,
     CharacterMentionsTool,
 )
-from dream_analysis.journal_tools import (
+from dream_analyzer.journal_tools import (
     DreamByIdTool,
     DreamDateRangeTool,
     DreamTagTool,
 )
-from dream_analysis.retrieval_tools import DreamKeywordSearchTool, DreamSearchTool
-from dream_analysis.tool_protocols import (
+from dream_analyzer.retrieval_tools import DreamKeywordSearchTool, DreamSearchTool
+from dream_analyzer.tool_protocols import (
     AgentTool,
     AnalyticalToolResult,
     CharacterRecordRepository,

@@ -13,7 +13,7 @@ from time import perf_counter
 from typing import Any, Callable
 
 from cli import analyze_dream, basic_rag
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
 
 
 CHAT_MODELS = ("qwen3:8b", "gemma3:12b")

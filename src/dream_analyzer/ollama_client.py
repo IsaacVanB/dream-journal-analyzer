@@ -9,7 +9,7 @@ from typing import Any
 
 import ollama
 
-from dream_analysis.config import OllamaSettings
+from dream_analyzer.config import OllamaSettings
 
 
 class OllamaResponseError(RuntimeError):

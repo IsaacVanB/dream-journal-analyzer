@@ -7,8 +7,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.dates import parse_iso_date_value, validate_date_range
-from dream_analysis.models import Dream, DreamValidationError
+from dream_analyzer.dates import parse_iso_date_value, validate_date_range
+from dream_analyzer.models import Dream, DreamValidationError
 
 
 class DreamNotFoundError(LookupError):

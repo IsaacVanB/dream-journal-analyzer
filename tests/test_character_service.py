@@ -5,7 +5,7 @@ import unittest
 from datetime import datetime, timezone
 
 from cli import build_character_lookup
-from dream_analysis.characters import CharacterLookupService
+from dream_analyzer.characters import CharacterLookupService
 
 
 class CharacterLookupServiceTests(unittest.TestCase):

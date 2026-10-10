@@ -9,9 +9,9 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 from cli import evaluate_retrieval
-from dream_analysis.agent import AgentResponse, ToolExecution
-from dream_analysis.bm25 import DreamBm25Index
-from dream_analysis.models import Dream
+from dream_analyzer.agent import AgentResponse, ToolExecution
+from dream_analyzer.bm25 import DreamBm25Index
+from dream_analyzer.models import Dream
 
 
 class RetrievalMetricTests(unittest.TestCase):

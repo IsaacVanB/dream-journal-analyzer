@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from dream_analysis.models import SearchResult
-from dream_analysis.rag import DirectRagService, clean_retrieval_query, format_context
+from dream_analyzer.models import SearchResult
+from dream_analyzer.rag import DirectRagService, clean_retrieval_query, format_context
 
 
 class FakeGateway:

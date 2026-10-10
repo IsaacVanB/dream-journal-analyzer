@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cli import dream_agent
-from dream_analysis.agent import (
+from dream_analyzer.agent import (
     AgentResponse,
     AgentToolLimitError,
     AgentTurnTrace,

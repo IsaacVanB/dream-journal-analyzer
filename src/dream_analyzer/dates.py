@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from dream_analysis.models import Dream
+    from dream_analyzer.models import Dream
 
 
 RecordT = TypeVar("RecordT", bound=Mapping[str, Any])

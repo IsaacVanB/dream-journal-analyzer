@@ -10,17 +10,17 @@ from typing import Any
 
 import pandas as pd
 
-from dream_analysis.artifacts import write_json_atomic
-from dream_analysis.config import Settings
-from dream_analysis.dates import (
+from dream_analyzer.artifacts import write_json_atomic
+from dream_analyzer.config import Settings
+from dream_analyzer.dates import (
     filter_records_by_date,
     format_period_label as shared_period_label,
     parse_date_bound,
     record_date,
 )
-from dream_analysis.repository import DreamRepository
-from dream_analysis.models import Dream
-from dream_analysis.statistics import (
+from dream_analyzer.repository import DreamRepository
+from dream_analyzer.models import Dream
+from dream_analyzer.statistics import (
     DEFAULT_STOPWORDS as SERVICE_STOPWORDS,
     WORD_RE,
     DreamStatisticsService,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import date, datetime
 
-from dream_analysis.dates import (
+from dream_analyzer.dates import (
     filter_records_by_date,
     format_period_label,
     parse_date_bound,

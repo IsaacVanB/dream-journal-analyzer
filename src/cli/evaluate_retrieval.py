@@ -16,17 +16,17 @@ from typing import Any, Callable, Iterable
 import chromadb
 
 from cli import basic_rag, dream_agent
-from dream_analysis.agent import DreamRagAgent, ToolExecution
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
-from dream_analysis.bm25 import DreamBm25Index
-from dream_analysis.index import validate_collection_embedding_model
-from dream_analysis.prompts import retrieval_evaluation_agent_user_prompt
-from dream_analysis.repository import (
+from dream_analyzer.agent import DreamRagAgent, ToolExecution
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.bm25 import DreamBm25Index
+from dream_analyzer.index import validate_collection_embedding_model
+from dream_analyzer.prompts import retrieval_evaluation_agent_user_prompt
+from dream_analyzer.repository import (
     CharacterDictionaryRepository,
     DreamRepository,
     StructuredDreamRepository,
 )
-from dream_analysis.retrieval_leaderboard import file_sha256, write_leaderboard
+from dream_analyzer.retrieval_leaderboard import file_sha256, write_leaderboard
 
 
 QUERIES_PATH = Path("data/retrieval_eval_queries.json")

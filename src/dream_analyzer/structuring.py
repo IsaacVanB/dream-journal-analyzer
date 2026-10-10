@@ -8,10 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.imports import dream_text_hash
-from dream_analysis.prompts import STRUCTURING_SYSTEM_PROMPT, structuring_user_prompt
-from dream_analysis.repository import DreamRepository
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.imports import dream_text_hash
+from dream_analyzer.prompts import STRUCTURING_SYSTEM_PROMPT, structuring_user_prompt
+from dream_analyzer.repository import DreamRepository
 
 
 DEFAULT_STRUCTURING_MODEL = "gemma3:12b"

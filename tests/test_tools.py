@@ -4,9 +4,9 @@ import json
 import unittest
 from datetime import date
 
-from dream_analysis.bm25 import Bm25SearchResult
-from dream_analysis.models import Dream, SearchResult
-from dream_analysis.tools import (
+from dream_analyzer.bm25 import Bm25SearchResult
+from dream_analyzer.models import Dream, SearchResult
+from dream_analyzer.tools import (
     CharacterContextTool,
     CharacterMentionsTool,
     DreamByIdTool,

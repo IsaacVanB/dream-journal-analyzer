@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from dream_analysis.retrieval_leaderboard import (
+from dream_analyzer.retrieval_leaderboard import (
     build_leaderboard,
     markdown_leaderboard,
     write_leaderboard,

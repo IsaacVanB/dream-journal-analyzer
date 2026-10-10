@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from dream_analysis.structuring import (
+from dream_analyzer.structuring import (
     DREAM_FEATURE_SCHEMA,
     EXTRACTION_VERSION,
     FEATURE_GROUPS,
@@ -509,7 +509,7 @@ class DreamStructuringTests(unittest.TestCase):
         existing = build_record(dream, valid_features(), model="feature-model")
 
         with patch(
-            "dream_analysis.structuring.EXTRACTION_VERSION",
+            "dream_analyzer.structuring.EXTRACTION_VERSION",
             EXTRACTION_VERSION + 1,
         ):
             stale = stale_feature_groups(

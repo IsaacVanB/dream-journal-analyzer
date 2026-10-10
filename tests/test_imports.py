@@ -5,14 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from dream_analysis.imports import (
+from dream_analyzer.imports import (
     AppendOnlyImportError,
     AppendOnlyJournalImporter,
     import_new_ids,
     load_import_state,
     sync_journal_files,
 )
-from dream_analysis.parser import JournalParser
+from dream_analyzer.parser import JournalParser
 
 
 OLD_JOURNAL = "1/1/2024\nI walked through a quiet house.\n1/2/2024\nI missed a train.\n"

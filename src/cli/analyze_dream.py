@@ -9,15 +9,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.analysis import (
+from dream_analyzer.analysis import (
     SingleDreamAnalysisService,
     format_related_context as format_analysis_context,
     format_saved_analysis as format_analysis_artifact,
     save_analysis as save_analysis_artifact,
     word_preview as make_word_preview,
 )
-from dream_analysis.config import Settings
-from dream_analysis.index import (
+from dream_analyzer.config import Settings
+from dream_analyzer.index import (
     DREAM_TEXT_SEPARATOR,
     DreamIndex,
     cosine_similarity as index_cosine_similarity,
@@ -25,9 +25,9 @@ from dream_analysis.index import (
     parse_index_date as parse_stored_date,
     validate_collection_embedding_model as validate_index_embedding_model,
 )
-from dream_analysis.models import RelatedDream
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.repository import DreamNotFoundError, DreamRepository
+from dream_analyzer.models import RelatedDream
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.repository import DreamNotFoundError, DreamRepository
 
 
 DEFAULT_SETTINGS = Settings()

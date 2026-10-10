@@ -4,8 +4,8 @@ import unittest
 from unittest.mock import Mock, patch
 
 from cli import basic_rag
-from dream_analysis.config import Settings
-from dream_analysis.models import SearchResult
+from dream_analyzer.config import Settings
+from dream_analyzer.models import SearchResult
 
 
 class BasicRagCompatibilityTests(unittest.TestCase):

@@ -10,8 +10,8 @@ import math
 import re
 import unicodedata
 
-from dream_analysis.dates import validate_date_range
-from dream_analysis.models import Dream
+from dream_analyzer.dates import validate_date_range
+from dream_analyzer.models import Dream
 
 
 # A token may contain internal apostrophes, but hyphens and other punctuation

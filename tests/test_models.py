@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from dream_analysis.models import Dream, DreamValidationError
+from dream_analyzer.models import Dream, DreamValidationError
 
 
 class DreamTests(unittest.TestCase):

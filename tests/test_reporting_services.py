@@ -4,9 +4,9 @@ import json
 import unittest
 from datetime import date
 
-from dream_analysis.models import Dream
-from dream_analysis.statistics import DreamStatisticsService
-from dream_analysis.trends import TagTrendService, rank_tags
+from dream_analyzer.models import Dream
+from dream_analyzer.statistics import DreamStatisticsService
+from dream_analyzer.trends import TagTrendService, rank_tags
 
 
 def dream(

@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from dream_analysis.imports import (
+from dream_analyzer.imports import (
     DEFAULT_IMPORT_STATE_PATH,
     AppendOnlyImportError,
     sync_journal_files,

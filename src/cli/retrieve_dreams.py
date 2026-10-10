@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import argparse
 
-from dream_analysis.config import Settings
-from dream_analysis.index import DreamIndex
-from dream_analysis.ollama_client import OllamaGateway
+from dream_analyzer.config import Settings
+from dream_analyzer.index import DreamIndex
+from dream_analyzer.ollama_client import OllamaGateway
 
 
 DEFAULT_SETTINGS = Settings()

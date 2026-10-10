@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from dream_analysis.cluster_reporting import render_report, write_report
-from dream_analysis.clustering import (
+from dream_analyzer.cluster_reporting import render_report, write_report
+from dream_analyzer.clustering import (
     ClusteringSettings,
     DreamClusteringService,
     DreamEmbeddingCollection,
@@ -98,7 +98,7 @@ class ClusteringServiceTests(unittest.TestCase):
             )
         )
 
-        with patch("dream_analysis.clustering.project_and_cluster", return_value=projected):
+        with patch("dream_analyzer.clustering.project_and_cluster", return_value=projected):
             analysis = service.analyze(collection)
 
         self.assertEqual(analysis.cluster_labels[0], "house / room")

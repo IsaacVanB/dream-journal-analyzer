@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from dream_analysis.characters import CharacterLookupService
-from dream_analysis.dates import parse_date_bound, validate_date_range
-from dream_analysis.tool_protocols import (
+from dream_analyzer.characters import CharacterLookupService
+from dream_analyzer.dates import parse_date_bound, validate_date_range
+from dream_analyzer.tool_protocols import (
     AnalyticalToolResult,
     CharacterRecordRepository,
     DreamCollectionRepository,

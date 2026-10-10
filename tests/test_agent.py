@@ -4,16 +4,16 @@ import json
 import unittest
 from datetime import date
 
-from dream_analysis.agent import (
+from dream_analyzer.agent import (
     AgentEmptyResponseError,
     AgentSearchRequiredError,
     DreamRagAgent,
     ToolExecution,
 )
-from dream_analysis.bm25 import DreamBm25Index
-from dream_analysis.models import Dream, SearchResult
-from dream_analysis.ollama_client import OllamaGateway, OllamaToolCall
-from dream_analysis.tools import (
+from dream_analyzer.bm25 import DreamBm25Index
+from dream_analyzer.models import Dream, SearchResult
+from dream_analyzer.ollama_client import OllamaGateway, OllamaToolCall
+from dream_analyzer.tools import (
     CharacterContextTool,
     CharacterMentionsTool,
     DreamByIdTool,

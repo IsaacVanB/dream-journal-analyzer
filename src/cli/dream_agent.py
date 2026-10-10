@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.agent import (
+from dream_analyzer.agent import (
     AgentResponse,
     AgentTraceError,
     AgentTurnTrace,
@@ -18,17 +18,17 @@ from dream_analysis.agent import (
     ToolExecution,
     ToolRequest,
 )
-from dream_analysis.artifacts import write_text_atomic
-from dream_analysis.bm25 import DreamBm25Index
-from dream_analysis.config import Settings
-from dream_analysis.index import DreamIndex
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.repository import (
+from dream_analyzer.artifacts import write_text_atomic
+from dream_analyzer.bm25 import DreamBm25Index
+from dream_analyzer.config import Settings
+from dream_analyzer.index import DreamIndex
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.repository import (
     CharacterDictionaryRepository,
     DreamRepository,
     StructuredDreamRepository,
 )
-from dream_analysis.tools import (
+from dream_analyzer.tools import (
     CharacterContextTool,
     CharacterMentionsTool,
     DreamByIdTool,

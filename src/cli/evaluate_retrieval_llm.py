@@ -14,9 +14,9 @@ from time import perf_counter
 from typing import Any
 
 from cli import analyze_dream, basic_rag
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.prompts import (
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.prompts import (
     RETRIEVAL_FOCUS_SYSTEM_PROMPT,
     RETRIEVAL_JUDGE_SYSTEM_PROMPT,
     retrieval_focus_user_prompt,

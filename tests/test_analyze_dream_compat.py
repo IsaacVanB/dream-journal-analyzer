@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cli import analyze_dream
-from dream_analysis.models import RelatedDream
+from dream_analyzer.models import RelatedDream
 
 
 class AnalyzeDreamCompatibilityTests(unittest.TestCase):

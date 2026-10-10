@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from dream_analysis.dates import parse_date_bound, validate_date_range
-from dream_analysis.statistics import DreamStatisticsService
-from dream_analysis.tool_protocols import (
+from dream_analyzer.dates import parse_date_bound, validate_date_range
+from dream_analyzer.statistics import DreamStatisticsService
+from dream_analyzer.tool_protocols import (
     AnalyticalToolResult,
     DreamCollectionRepository,
 )
-from dream_analysis.trends import TagTrendService
+from dream_analyzer.trends import TagTrendService
 
 
 class DreamStatisticsTool:

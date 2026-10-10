@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from dream_analysis.cluster_reporting import (
+from dream_analyzer.cluster_reporting import (
     ClusterReportService,
     plot_maps,
     render_report,
@@ -14,7 +14,7 @@ from dream_analysis.cluster_reporting import (
     write_html,
     write_report,
 )
-from dream_analysis.clustering import (
+from dream_analyzer.clustering import (
     ClusteringSettings,
     DreamClusteringService,
     DreamEmbeddingRepository,
@@ -28,7 +28,7 @@ from dream_analysis.clustering import (
     quality_metrics,
     representative_indices,
 )
-from dream_analysis.index import DREAM_TEXT_SEPARATOR, extract_dream_text
+from dream_analyzer.index import DREAM_TEXT_SEPARATOR, extract_dream_text
 
 
 CHROMA_PATH = "data/chroma_db"

@@ -15,9 +15,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import normalize
 
-from dream_analysis.index import extract_dream_text
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.prompts import cluster_label_prompt
+from dream_analyzer.index import extract_dream_text
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.prompts import cluster_label_prompt
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +148,7 @@ def project_and_cluster(
     random_state: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     """Normalize, reduce, project, and cluster an embedding matrix."""
-    numba_cache_dir = Path("/tmp/dream_analysis_numba")
+    numba_cache_dir = Path("/tmp/dream_analyzer_numba")
     numba_cache_dir.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("NUMBA_CACHE_DIR", str(numba_cache_dir.resolve()))
     try:
@@ -156,7 +156,7 @@ def project_and_cluster(
         import umap
     except ImportError as exc:
         raise RuntimeError(
-            "Clustering dependencies are missing. Reinstall dream-analysis."
+            "Clustering dependencies are missing. Reinstall dream-analyzer."
         ) from exc
 
     if vectors.shape[0] < 3:

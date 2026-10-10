@@ -7,16 +7,16 @@ from datetime import date, datetime
 from pathlib import Path
 import re
 
-from dream_analysis.artifacts import write_text_atomic
-from dream_analysis.dates import validate_date_range
-from dream_analysis.index import DreamIndex
-from dream_analysis.models import Dream, RelatedDream
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.prompts import (
+from dream_analyzer.artifacts import write_text_atomic
+from dream_analyzer.dates import validate_date_range
+from dream_analyzer.index import DreamIndex
+from dream_analyzer.models import Dream, RelatedDream
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.prompts import (
     SINGLE_DREAM_ANALYSIS_SYSTEM_PROMPT,
-    single_dream_analysis_user_prompt,
+    single_dream_analyzer_user_prompt,
 )
-from dream_analysis.repository import DreamRepository
+from dream_analyzer.repository import DreamRepository
 
 
 NO_ANALYSIS = "[No analysis returned by chat model.]"
@@ -192,7 +192,7 @@ class SingleDreamAnalysisService:
             related_dreams,
             max_chars_per_dream=max_chars_per_related_dream,
         )
-        user_prompt = single_dream_analysis_user_prompt(
+        user_prompt = single_dream_analyzer_user_prompt(
             metadata=metadata,
             dream_text=text,
             related_context=related_context,

@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Protocol, TypedDict
 
-from dream_analysis.bm25 import Bm25SearchResult
-from dream_analysis.models import Dream, SearchResult
+from dream_analyzer.bm25 import Bm25SearchResult
+from dream_analyzer.models import Dream, SearchResult
 
 
 class AnalyticalToolResult(TypedDict):

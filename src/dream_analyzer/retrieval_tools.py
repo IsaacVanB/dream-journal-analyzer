@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from dream_analysis.bm25 import Bm25SearchResult
-from dream_analysis.dates import parse_date_bound, validate_date_range
-from dream_analysis.models import SearchResult
-from dream_analysis.tool_protocols import (
+from dream_analyzer.bm25 import Bm25SearchResult
+from dream_analyzer.dates import parse_date_bound, validate_date_range
+from dream_analyzer.models import SearchResult
+from dream_analyzer.tool_protocols import (
     SearchableDreamIndex,
     SearchableDreamKeywordIndex,
 )

@@ -104,7 +104,7 @@ RETRIEVAL_JUDGE_SYSTEM_PROMPT = (
 )
 
 
-def single_dream_analysis_user_prompt(
+def single_dream_analyzer_user_prompt(
     *,
     metadata: str,
     dream_text: str,

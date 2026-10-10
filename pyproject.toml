@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dream-analysis"
+name = "dream-analyzer"
 version = "0.1.0"
 description = "Local dream-journal parsing, retrieval, and analysis"
 readme = "README.md"
@@ -31,7 +31,7 @@ dream-analyzer = "cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["dream_analysis*", "cli*"]
+include = ["dream_analyzer*", "cli*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

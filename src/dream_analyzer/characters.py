@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
-from dream_analysis.dates import parse_iso_date_value
+from dream_analyzer.dates import parse_iso_date_value
 
 
 LOOKUP_SCHEMA_VERSION = 1

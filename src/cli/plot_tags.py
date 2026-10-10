@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-MPLCONFIGDIR = Path("/tmp/dream_analysis_matplotlib")
+MPLCONFIGDIR = Path("/tmp/dream_analyzer_matplotlib")
 MPLCONFIGDIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIGDIR.resolve()))
 
@@ -22,16 +22,16 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from dream_analysis.config import Settings
-from dream_analysis.dates import (
+from dream_analyzer.config import Settings
+from dream_analyzer.dates import (
     filter_records_by_date,
     format_period_label as shared_period_label,
     parse_date_bound,
     record_date,
 )
-from dream_analysis.repository import DreamRepository
-from dream_analysis.models import Dream
-from dream_analysis.trends import TagTrendService, dream_counts_by_period, rank_tags
+from dream_analyzer.repository import DreamRepository
+from dream_analyzer.models import Dream
+from dream_analyzer.trends import TagTrendService, dream_counts_by_period, rank_tags
 
 
 plt.style.use("seaborn-v0_8-whitegrid")

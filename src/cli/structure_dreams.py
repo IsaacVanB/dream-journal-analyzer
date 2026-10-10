@@ -9,11 +9,11 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Mapping
 
-from dream_analysis.artifacts import write_text_atomic
-from dream_analysis.config import Settings
-from dream_analysis.imports import DEFAULT_IMPORT_STATE_PATH, import_new_ids
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.structuring import (
+from dream_analyzer.artifacts import write_text_atomic
+from dream_analyzer.config import Settings
+from dream_analyzer.imports import DEFAULT_IMPORT_STATE_PATH, import_new_ids
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.structuring import (
     ARRAY_FIELDS,
     BOOLEAN_FIELDS,
     DEFAULT_STRUCTURING_MODEL,

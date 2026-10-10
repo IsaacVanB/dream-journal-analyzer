@@ -1,1 +1,1 @@
-"""Command-line entry points for the dream-analysis project."""
+"""Command-line entry points for the dream-analyzer project."""

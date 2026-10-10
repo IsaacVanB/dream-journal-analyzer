@@ -11,11 +11,11 @@ from typing import Any
 
 import numpy as np
 
-from dream_analysis.artifacts import write_text_atomic
-from dream_analysis.clustering import ClusterAnalysis
+from dream_analyzer.artifacts import write_text_atomic
+from dream_analyzer.clustering import ClusterAnalysis
 
 
-MPLCONFIGDIR = Path("/tmp/dream_analysis_matplotlib")
+MPLCONFIGDIR = Path("/tmp/dream_analyzer_matplotlib")
 MPLCONFIGDIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIGDIR.resolve()))
 

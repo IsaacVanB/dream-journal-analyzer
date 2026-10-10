@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from dream_analysis.index import DreamIndex
-from dream_analysis.models import SearchResult
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.prompts import (
+from dream_analyzer.index import DreamIndex
+from dream_analyzer.models import SearchResult
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.prompts import (
     DIRECT_RAG_ANSWER_SYSTEM_PROMPT,
     DIRECT_RAG_QUERY_SYSTEM_PROMPT,
     direct_rag_answer_user_prompt,

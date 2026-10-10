@@ -114,7 +114,7 @@ Requires Python 3.10+ and a local [Ollama](https://ollama.com/) installation.
 
 ```bash
 git clone https://github.com/IsaacVanB/dream-journal-analyzer.git
-cd dream-analyzer
+cd dream-journal-analyzer
 
 python -m pip install --editable ".[dev]"
 

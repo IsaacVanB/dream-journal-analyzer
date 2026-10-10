@@ -6,14 +6,14 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from dream_analysis.config import Settings
-from dream_analysis.index import (
+from dream_analyzer.config import Settings
+from dream_analyzer.index import (
     DreamIndex,
     validate_collection_embedding_model as validate_index_embedding_model,
 )
-from dream_analysis.models import SearchResult
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.rag import (
+from dream_analyzer.models import SearchResult
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.rag import (
     DirectRagService,
     clean_retrieval_query as clean_query,
     format_context as format_rag_context,

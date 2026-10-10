@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Mapping
 
-from dream_analysis.ollama_client import OllamaGateway, OllamaToolCall
-from dream_analysis.prompts import (
+from dream_analyzer.ollama_client import OllamaGateway, OllamaToolCall
+from dream_analyzer.prompts import (
     AGENT_SEARCH_FINISHED_REASON,
     AGENT_SYNTHESIS_ANALYSIS_TASK,
     AGENT_SYNTHESIS_DREAMS_TASK,
@@ -21,7 +21,7 @@ from dream_analysis.prompts import (
     agent_tool_budget_reason,
     agent_tool_reminder,
 )
-from dream_analysis.tool_protocols import AgentTool
+from dream_analyzer.tool_protocols import AgentTool
 
 
 class AgentSearchRequiredError(RuntimeError):

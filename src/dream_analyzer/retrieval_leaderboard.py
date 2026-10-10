@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
 
 
 LEADERBOARD_JSON = "leaderboard.json"

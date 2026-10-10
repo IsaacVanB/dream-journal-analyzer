@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.artifacts import write_text_atomic
-from dream_analysis.parser import (
+from dream_analyzer.artifacts import write_text_atomic
+from dream_analyzer.parser import (
     DATE_RE,
     TAG_LINE_RE,
     WORD_RE,

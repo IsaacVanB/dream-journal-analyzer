@@ -9,13 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.characters import (
+from dream_analyzer.characters import (
     LOOKUP_SCHEMA_VERSION,
     CharacterLookupService,
     character_id as service_character_id,
     valid_date as service_valid_date,
 )
-from dream_analysis.artifacts import write_json_atomic
+from dream_analyzer.artifacts import write_json_atomic
 
 
 INPUT_PATH = Path("outputs/structured_dreams/dream_features.jsonl")

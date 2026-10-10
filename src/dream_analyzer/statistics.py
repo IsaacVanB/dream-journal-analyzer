@@ -9,13 +9,13 @@ from collections.abc import Iterable, Sequence
 from datetime import date, datetime
 from typing import Any
 
-from dream_analysis.dates import (
+from dream_analyzer.dates import (
     filter_dreams_by_date,
     format_period_label,
     period_start,
     validate_period_frequency,
 )
-from dream_analysis.models import Dream
+from dream_analyzer.models import Dream
 
 
 WORD_RE = re.compile(r"[A-Za-z']+")

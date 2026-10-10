@@ -12,10 +12,10 @@ from typing import Any
 import chromadb
 from chromadb.errors import NotFoundError
 
-from dream_analysis.dates import record_date, parse_date_value, validate_date_range
-from dream_analysis.imports import dream_text_hash
-from dream_analysis.models import Dream, RelatedDream, SearchResult
-from dream_analysis.ollama_client import OllamaGateway
+from dream_analyzer.dates import record_date, parse_date_value, validate_date_range
+from dream_analyzer.imports import dream_text_hash
+from dream_analyzer.models import Dream, RelatedDream, SearchResult
+from dream_analyzer.ollama_client import OllamaGateway
 
 
 DREAM_TEXT_SEPARATOR = "--- DREAM TEXT ---"

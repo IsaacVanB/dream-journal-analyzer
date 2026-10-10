@@ -6,8 +6,8 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from dream_analysis.models import DreamValidationError
-from dream_analysis.repository import (
+from dream_analyzer.models import DreamValidationError
+from dream_analyzer.repository import (
     CharacterDictionaryRepository,
     DreamNotFoundError,
     DreamRepository,

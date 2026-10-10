@@ -1,4 +1,4 @@
-"""Typed domain objects used across dream-analysis services."""
+"""Typed domain objects used across dream-analyzer services."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Mapping
 
-from dream_analysis.dates import parse_iso_date_value
+from dream_analyzer.dates import parse_iso_date_value
 
 
 class DreamValidationError(ValueError):

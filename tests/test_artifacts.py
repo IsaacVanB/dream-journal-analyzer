@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
 
 
 class ArtifactWriterTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class ArtifactWriterTests(unittest.TestCase):
         path.write_text("old content", encoding="utf-8")
 
         with patch(
-            "dream_analysis.artifacts.os.replace",
+            "dream_analyzer.artifacts.os.replace",
             side_effect=OSError("replace failed"),
         ):
             with self.assertRaisesRegex(OSError, "replace failed"):

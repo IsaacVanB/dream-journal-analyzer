@@ -10,16 +10,16 @@ from typing import Any
 import chromadb
 from chromadb.errors import NotFoundError
 
-from dream_analysis.config import Settings
-from dream_analysis.index import (
+from dream_analyzer.config import Settings
+from dream_analyzer.index import (
     DreamIndex,
     IndexSyncResult,
     build_document as build_index_document,
     build_metadata as build_index_metadata,
 )
-from dream_analysis.models import Dream
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.repository import DreamRepository
+from dream_analyzer.models import Dream
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.repository import DreamRepository
 
 
 DEFAULT_SETTINGS = Settings()

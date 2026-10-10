@@ -5,14 +5,14 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from dream_analysis.index import (
+from dream_analyzer.index import (
     DREAM_TEXT_SEPARATOR,
     DreamIndex,
     EmbeddingModelMismatchError,
     build_document,
     build_metadata,
 )
-from dream_analysis.models import Dream
+from dream_analyzer.models import Dream
 
 
 class FakeEmbeddingGateway:

@@ -5,13 +5,13 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from dream_analysis.analysis import (
+from dream_analyzer.analysis import (
     SingleDreamAnalysisService,
     format_related_context,
     format_saved_analysis,
     save_analysis,
 )
-from dream_analysis.models import RelatedDream
+from dream_analyzer.models import RelatedDream
 
 
 class FakeGateway:

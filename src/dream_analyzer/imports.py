@@ -12,9 +12,9 @@ import re
 import unicodedata
 from typing import Any, Mapping, Sequence
 
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
-from dream_analysis.parser import JournalParser
-from dream_analysis.repository import DreamRepository
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.parser import JournalParser
+from dream_analyzer.repository import DreamRepository
 
 
 IMPORT_STATE_VERSION = 1

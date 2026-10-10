@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from dream_analysis.dates import parse_date_bound, validate_date_range
-from dream_analysis.models import Dream
-from dream_analysis.tool_protocols import (
+from dream_analyzer.dates import parse_date_bound, validate_date_range
+from dream_analyzer.models import Dream
+from dream_analyzer.tool_protocols import (
     DatedDreamRepository,
     DreamByIdRepository,
     TaggedDreamRepository,

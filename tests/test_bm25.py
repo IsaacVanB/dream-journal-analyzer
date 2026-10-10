@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from dream_analysis.bm25 import DreamBm25Index, tokenize_english
-from dream_analysis.models import Dream
+from dream_analyzer.bm25 import DreamBm25Index, tokenize_english
+from dream_analyzer.models import Dream
 
 
 def make_dream(dream_id: str, text: str, day: int | None) -> Dream:

@@ -11,9 +11,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from dream_analysis.config import Settings
-from dream_analysis.dates import parse_date_value
-from dream_analysis.repository import load_jsonl_objects
+from dream_analyzer.config import Settings
+from dream_analyzer.dates import parse_date_value
+from dream_analyzer.repository import load_jsonl_objects
 
 
 DREAMS_PATH = Settings().dreams_path

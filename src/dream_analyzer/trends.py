@@ -7,14 +7,14 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any
 
-from dream_analysis.dates import (
+from dream_analyzer.dates import (
     filter_dreams_by_date,
     format_period_label,
     parse_date_bound,
     period_start,
     validate_period_frequency,
 )
-from dream_analysis.models import Dream
+from dream_analyzer.models import Dream
 
 
 def rank_tags(dreams: Sequence[Dream], *, top_n: int) -> list[str]:

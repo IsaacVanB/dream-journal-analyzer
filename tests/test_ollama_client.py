@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from dream_analysis.config import OllamaSettings
-from dream_analysis.ollama_client import OllamaGateway, OllamaResponseError
+from dream_analyzer.config import OllamaSettings
+from dream_analyzer.ollama_client import OllamaGateway, OllamaResponseError
 
 
 class FakeOllamaClient:

@@ -1,7 +1,7 @@
-"""Reusable services for the dream-analysis project."""
+"""Reusable services for the dream-analyzer project."""
 
-from dream_analysis.analysis import SingleDreamAnalysisService
-from dream_analysis.agent import (
+from dream_analyzer.analysis import SingleDreamAnalysisService
+from dream_analyzer.agent import (
     AgentEmptyResponseError,
     AgentResponse,
     AgentTraceError,
@@ -11,11 +11,11 @@ from dream_analysis.agent import (
     ToolExecution,
     ToolRequest,
 )
-from dream_analysis.artifacts import write_json_atomic, write_text_atomic
-from dream_analysis.bm25 import Bm25SearchResult, DreamBm25Index, tokenize_english
-from dream_analysis.characters import CharacterLookupService
-from dream_analysis.config import Settings
-from dream_analysis.dates import (
+from dream_analyzer.artifacts import write_json_atomic, write_text_atomic
+from dream_analyzer.bm25 import Bm25SearchResult, DreamBm25Index, tokenize_english
+from dream_analyzer.characters import CharacterLookupService
+from dream_analyzer.config import Settings
+from dream_analyzer.dates import (
     filter_records_by_date,
     filter_dreams_by_date,
     format_period_label,
@@ -24,22 +24,22 @@ from dream_analysis.dates import (
     record_date,
     validate_date_range,
 )
-from dream_analysis.index import DreamIndex, EmbeddingModelMismatchError
-from dream_analysis.models import Dream, DreamValidationError, RelatedDream, SearchResult
-from dream_analysis.ollama_client import OllamaGateway
-from dream_analysis.parser import JournalParser
-from dream_analysis.rag import DirectRagService
-from dream_analysis.repository import (
+from dream_analyzer.index import DreamIndex, EmbeddingModelMismatchError
+from dream_analyzer.models import Dream, DreamValidationError, RelatedDream, SearchResult
+from dream_analyzer.ollama_client import OllamaGateway
+from dream_analyzer.parser import JournalParser
+from dream_analyzer.rag import DirectRagService
+from dream_analyzer.repository import (
     CharacterDictionaryRepository,
     DreamNotFoundError,
     DreamRepository,
     StructuredDreamRepository,
     load_jsonl_objects,
 )
-from dream_analysis.statistics import DreamStatisticsService
-from dream_analysis.structuring import DreamStructuringService
-from dream_analysis.trends import TagTrendService
-from dream_analysis.tools import (
+from dream_analyzer.statistics import DreamStatisticsService
+from dream_analyzer.structuring import DreamStructuringService
+from dream_analyzer.trends import TagTrendService
+from dream_analyzer.tools import (
     AgentTool,
     AnalyticalToolResult,
     CharacterContextTool,

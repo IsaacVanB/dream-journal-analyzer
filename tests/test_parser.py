@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cli import parse_dreams
-from dream_analysis.parser import (
+from dream_analyzer.parser import (
     JournalParser,
     detect_dream_separator_blank_lines,
     normalize_year,
