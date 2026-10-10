@@ -1,4 +1,4 @@
-[![CI](https://github.com/IsaacVanB/dream-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/IsaacVanB/dream-analyzer/actions/workflows/ci.yml)
+[![CI](https://github.com/IsaacVanB/dream-journal-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/IsaacVanB/dream-journal-analyzer/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-red)
 
@@ -44,25 +44,51 @@ The system separates reusable retrieval and analytical services from CLI and age
 
 ## Retrieval evaluation
 
-Retrieval is evaluated on a 56-query labeled benchmark built from the included synthetic journal. Each query has a fine-grained category plus multi-label attributes for topical, lexical, entity, compositional, temporal, and low-overlap analysis. The benchmark includes proper names, rare objects, exact places, inflected variants, separated phrase terms, mixed entity/concept queries, and queries with little or no lexical overlap.  
+Retrieval is evaluated on labeled benchmarks covering topical, lexical, entity,
+compositional, temporal, and low-overlap queries. Scores should be compared
+within each table rather than across the two datasets.
 
-| Strategy | Embedding model | Chat model | R-precision | R@5 | R@10 | Time/query |
+### Synthetic journal (56 queries)
+
+These results use the included synthetic journal. The benchmark includes proper
+names, rare objects, exact places, inflected variants, separated phrase terms,
+mixed entity/concept queries, and queries with little or no lexical overlap.
+
+| Strategy | Embedding model | Chat model | R@5 | R@10 | R-precision | Time/query |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Agent | qwen3-embedding | gemma4:12b | **0.608** | **0.676** | 0.763 | 50.793 s |
-| Agent | nomic-embed-text | qwen3:8b | 0.537 | 0.659 | **0.783** | 9.920 s |
-| BM25 baseline | — | — | 0.596 | 0.602 | 0.677 | **<0.001 s** |
-| Agent | qwen3-embedding | qwen3:8b | 0.574 | 0.652 | 0.746 | 16.389 s |
-| Agent | nomic-embed-text | gemma4:12b | 0.554 | 0.656 | 0.716 | 24.840 s |
-| Fixed hybrid | qwen3-embedding | — | 0.444 | 0.589 | 0.680 | 0.359 s |
-| Fixed hybrid | nomic-embed-text | — | 0.434 | 0.636 | 0.736 | 0.103 s |
-| Semantic baseline | nomic-embed-text | — | 0.416 | 0.411 | 0.469 | 0.094 s |
-| Semantic baseline | qwen3-embedding | — | 0.357 | 0.403 | 0.445 | 0.458 s |
+| Agent | qwen3-embedding | gemma4:12b | **0.676** | 0.763 | **0.608** | 50.793 s |
+| Agent | nomic-embed-text | qwen3:8b | 0.659 | **0.783** | 0.537 | 9.920 s |
+| Agent | nomic-embed-text | gemma4:12b | 0.656 | 0.716 | 0.554 | 24.840 s |
+| Agent | qwen3-embedding | qwen3:8b | 0.652 | 0.746 | 0.574 | 16.389 s |
+| Fixed hybrid | nomic-embed-text | — | 0.636 | 0.736 | 0.434 | 0.103 s |
+| BM25 baseline | — | — | 0.602 | 0.677 | 0.596 | **<0.001 s** |
+| Fixed hybrid | qwen3-embedding | — | 0.589 | 0.680 | 0.444 | 0.359 s |
+| Semantic baseline | nomic-embed-text | — | 0.411 | 0.469 | 0.416 | 0.094 s |
+| Semantic baseline | qwen3-embedding | — | 0.403 | 0.445 | 0.357 | 0.458 s |
 
 The qwen3-embedding and gemma4:12b agent has the highest R-precision and R@5,
 while the nomic-embed-text and qwen3:8b agent has the highest R@10. BM25 remains
-the fastest strategy and has the second-highest R-precision.  
+the fastest strategy and has the second-highest R-precision.
 
-See [`leaderboard.md`](outputs/retrieval_evaluations/leaderboard.md) for more detailed evaluation results.  
+### Two-month sample of a real journal (39 queries)
+
+| Strategy | Embedding model | Chat model | R@5 | R@10 | R-precision | Time/query |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| Agent | nomic-embed-text | qwen3:8b | **0.721** | **0.852** | 0.580 | 9.987 s |
+| Agent | nomic-embed-text | gemma4:12b | 0.710 | 0.811 | **0.662** | 33.530 s |
+| Agent | qwen3-embedding | qwen3:8b | 0.666 | 0.757 | 0.513 | 19.206 s |
+| Agent | qwen3-embedding | gemma4:12b | 0.659 | 0.765 | 0.566 | 35.966 s |
+| Fixed hybrid | nomic-embed-text | — | 0.634 | 0.831 | 0.565 | 0.083 s |
+| BM25 baseline | — | — | 0.599 | 0.732 | 0.586 | **<0.001 s** |
+| Fixed hybrid | qwen3-embedding | — | 0.582 | 0.719 | 0.414 | 0.363 s |
+| Semantic baseline | nomic-embed-text | — | 0.578 | 0.703 | 0.497 | 0.217 s |
+| Semantic baseline | qwen3-embedding | — | 0.340 | 0.481 | 0.211 | 0.615 s |
+
+The nomic-embed-text and gemma4:12b agent has the highest R-precision, while
+the nomic-embed-text and qwen3:8b agent has the highest recall at both cutoffs.
+BM25 remains the fastest strategy.
+
+See [`leaderboard.md`](outputs/retrieval_evaluations/leaderboard.md) for more detailed synthetic-journal evaluation results.
 
 Benchmark reports include per-query results, aggregate metrics, experiment metadata, errors, runtime, and descriptive agent tool traces.
 For agent-mode evaluation, every labeled input is wrapped as an explicit request
@@ -87,7 +113,7 @@ dream-analyzer evaluate-retrieval \
 Requires Python 3.10+ and a local [Ollama](https://ollama.com/) installation.
 
 ```bash
-git clone https://github.com/IsaacVanB/dream-analyzer.git
+git clone https://github.com/IsaacVanB/dream-journal-analyzer.git
 cd dream-analyzer
 
 python -m pip install --editable ".[dev]"
