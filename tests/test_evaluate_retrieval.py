@@ -241,6 +241,36 @@ class RetrievalMetricTests(unittest.TestCase):
                 args = parser.parse_args(["--retrieval-mode", mode])
                 self.assertEqual(args.retrieval_mode, mode)
 
+    def test_regenerates_markdown_reports_from_json(self) -> None:
+        summary = evaluate_retrieval.summarize([])
+        report = {
+            "created_at": "2026-09-11T12:00:00-04:00",
+            "queries_path": "queries.json",
+            "settings": {},
+            "preflight": {"status": "ok"},
+            "summary": summary,
+            "category_summaries": {},
+            "attribute_summaries": {},
+            "queries": [],
+        }
+        with TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory)
+            json_path = output_dir / "benchmark_bm25_example.json"
+            json_path.write_text(json.dumps(report), encoding="utf-8")
+            parser = evaluate_retrieval.build_parser()
+            args = parser.parse_args(
+                ["--regenerate-markdown", "--output-dir", str(output_dir)]
+            )
+
+            with redirect_stdout(StringIO()):
+                result = evaluate_retrieval.run_command(args, parser)
+
+            markdown_path = output_dir / "benchmark_bm25_example.md"
+            self.assertEqual(result["markdown_paths"], [markdown_path])
+            self.assertIn("# Retrieval benchmark", markdown_path.read_text())
+            self.assertTrue((output_dir / "leaderboard.json").is_file())
+            self.assertTrue((output_dir / "leaderboard.md").is_file())
+
     def test_embedding_baseline_embeds_query_verbatim_and_retrieves_to_r(self) -> None:
         calls = []
 

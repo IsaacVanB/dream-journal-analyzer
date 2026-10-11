@@ -161,6 +161,8 @@ On the real-journal benchmark, the `nomic-embed-text` and `qwen3:8b` agent has t
 
 For both experiments, temperature was set to 0. Both sets of retrieval queries used the same categories. When making the retrieval set for my dreams, I tried to match (or exceed) the “difficulty” of the AI-generated queries.
 
+Recall@k measures how much of the known relevant set is recovered within the first k results. R-precision evaluates precision after retrieving exactly R results, where R is the number of known relevant dreams for that query, making it useful when queries have different numbers of relevant results.
+
 In both cases, agents outperformed the BM25, semantic-search, and fixed-hybrid baselines, but the optimal embedding and chat models differed. Using `nomic-embed-text` for embedding and `qwen3:8b` for chat gave good results for both journals, with the fastest average query time among the four agent configurations. This combination may be a good default, but the best model combination will likely vary by user. Because the models run locally, users must consider hardware constraints when choosing them; response times exceeding 30 seconds per query may be impractical.
 
 Differences in performance are likely due to variations in writing style, vocabulary, content, and length. These factors vary from person to person. In these samples, real dreams were more chaotic than AI-generated dreams, and their recurring themes were subtler.

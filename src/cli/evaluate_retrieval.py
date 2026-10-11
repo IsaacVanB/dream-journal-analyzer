@@ -1095,6 +1095,43 @@ def _format_tool_call(call: dict[str, Any]) -> str:
     return rendered
 
 
+def regenerate_markdown_reports(output_dir: Path | str) -> list[Path]:
+    """Re-render every benchmark Markdown report from its JSON artifact."""
+    directory = Path(output_dir)
+    json_paths = sorted(directory.glob("benchmark_*.json"))
+    if not json_paths:
+        raise ValueError(f"no benchmark JSON reports found in {directory}")
+
+    rendered_reports: list[tuple[Path, str]] = []
+    for json_path in json_paths:
+        try:
+            report = json.loads(json_path.read_text(encoding="utf-8"))
+            if not isinstance(report, dict):
+                raise ValueError("top-level JSON value is not an object")
+            settings = report.get("settings")
+            if not isinstance(settings, dict):
+                raise ValueError("settings is not an object")
+            if "retrieval_mode" not in settings:
+                filename_mode = json_path.stem.removeprefix("benchmark_").split(
+                    "_", 1
+                )[0]
+                inferred_mode = (
+                    filename_mode if filename_mode in RETRIEVAL_MODES else "agent"
+                )
+                report = {
+                    **report,
+                    "settings": {**settings, "retrieval_mode": inferred_mode},
+                }
+            rendered = markdown_report(report)
+        except (OSError, KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"cannot render {json_path}: {exc}") from exc
+        rendered_reports.append((json_path.with_suffix(".md"), rendered))
+
+    for markdown_path, rendered in rendered_reports:
+        write_text_atomic(markdown_path, rendered)
+    return [markdown_path for markdown_path, _ in rendered_reports]
+
+
 def build_parser(
     parser: argparse.ArgumentParser | None = None,
 ) -> argparse.ArgumentParser:
@@ -1163,10 +1200,19 @@ def build_parser(
         "--experiment-note",
         help="Optional note describing what changed in this experiment.",
     )
-    parser.add_argument(
+    maintenance_actions = parser.add_mutually_exclusive_group()
+    maintenance_actions.add_argument(
         "--rebuild-leaderboard",
         action="store_true",
         help="Rebuild leaderboard artifacts from existing benchmark JSON files.",
+    )
+    maintenance_actions.add_argument(
+        "--regenerate-markdown",
+        action="store_true",
+        help=(
+            "Regenerate all benchmark Markdown reports from their JSON artifacts "
+            "and rebuild the leaderboard without running an evaluation."
+        ),
     )
     return parser
 
@@ -1188,7 +1234,27 @@ def run_command(
     args: argparse.Namespace,
     parser: argparse.ArgumentParser,
 ) -> dict[str, Any]:
-    """Run one benchmark or rebuild only the cross-experiment leaderboard."""
+    """Run a benchmark or perform a report-maintenance action."""
+    if args.regenerate_markdown:
+        try:
+            markdown_paths = regenerate_markdown_reports(args.output_dir)
+            leaderboard_json, leaderboard_markdown = write_leaderboard(
+                args.output_dir
+            )
+        except (OSError, ValueError) as exc:
+            parser.exit(2, f"error: {exc}\n")
+        print(
+            f"Regenerated {len(markdown_paths)} benchmark Markdown report(s) "
+            f"in {args.output_dir}"
+        )
+        print(f"Updated {leaderboard_json}")
+        print(f"Updated {leaderboard_markdown}")
+        return {
+            "markdown_paths": markdown_paths,
+            "leaderboard_json": leaderboard_json,
+            "leaderboard_markdown": leaderboard_markdown,
+        }
+
     if args.rebuild_leaderboard:
         leaderboard_json, leaderboard_markdown = write_leaderboard(
             args.output_dir,

@@ -547,10 +547,19 @@ Arguments:
 - `--experiment-note`: optional note describing the experiment change.
 - `--rebuild-leaderboard`: rebuild leaderboard JSON and Markdown from existing
   benchmark reports without running a new evaluation.
+- `--regenerate-markdown`: regenerate every `benchmark_*.md` file from its
+  corresponding JSON artifact, then rebuild the leaderboard without running a
+  new evaluation.
 
 Every completed run updates the JSON and Markdown leaderboards in
 `outputs/retrieval_evaluations/`. Use `--rebuild-leaderboard` to regenerate them
 from existing benchmark reports.
+
+To regenerate all benchmark Markdown reports after changing their renderer:
+
+```bash
+dream-analyzer evaluate-retrieval --regenerate-markdown
+```
 
 ## `src/cli/evaluate_retrieval_llm.py`
 
