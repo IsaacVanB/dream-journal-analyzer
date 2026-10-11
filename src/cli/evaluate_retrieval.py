@@ -945,6 +945,16 @@ def _format_dream_ids(dream_ids: Iterable[Any]) -> str:
     return rendered.replace("|", "\\|").replace("\n", " ")
 
 
+def _missing_relevant_dream_ids(row: dict[str, Any]) -> list[Any]:
+    """Return relevant dream IDs absent from the complete retrieved ranking."""
+    retrieved_ids = set(row.get("retrieved_dream_ids", ()))
+    return [
+        dream_id
+        for dream_id in row.get("relevant_dream_ids", ())
+        if dream_id not in retrieved_ids
+    ]
+
+
 def markdown_report(report: dict[str, Any]) -> str:
     """Render aggregate and per-query retrieval metrics as Markdown."""
     settings = report["settings"]
@@ -1032,8 +1042,8 @@ def markdown_report(report: dict[str, Any]) -> str:
             "",
             "## Per-query results",
             "",
-            "| query | category | attributes | status | relevant | retrieved dream IDs (ranked) | correct dream IDs | hits@5 | hits@10 | R@5 | R@10 | R-precision | P@5 | P@10 | max P@5 | max P@10 | error |",
-            "|---|---|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+            "| query | category | attributes | status | relevant | retrieved dream IDs (ranked) | correct dream IDs | missing correct dream IDs | hits@5 | hits@10 | R@5 | R@10 | R-precision | error |",
+            "|---|---|---|---|---:|:---|:---|:---|---:|---:|---:|---:|---:|---|",
         ]
     )
     for row in report["queries"]:
@@ -1046,15 +1056,12 @@ def markdown_report(report: dict[str, Any]) -> str:
             f"{row['relevant_count']} | "
             f"{_format_dream_ids(row.get('retrieved_dream_ids', ()))} | "
             f"{_format_dream_ids(row.get('relevant_dream_ids', ()))} | "
+            f"{_format_dream_ids(_missing_relevant_dream_ids(row))} | "
             f"{_display(row['relevant_at_5'])} | "
             f"{_display(row['relevant_at_10'])} | "
             f"{_display(row['recall_at_5'])} | "
             f"{_display(row['recall_at_10'])} | "
             f"{_display(row['r_precision'])} | "
-            f"{_display(row['precision_at_5'])} | "
-            f"{_display(row['precision_at_10'])} | "
-            f"{_display(row['max_precision_at_5'])} | "
-            f"{_display(row['max_precision_at_10'])} | "
             f"{error} |"
         )
     if retrieval_mode == "agent":

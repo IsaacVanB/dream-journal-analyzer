@@ -523,14 +523,18 @@ class RetrievalMetricTests(unittest.TestCase):
             markdown,
         )
         self.assertIn(
-            "| hits@5 | hits@10 | R@5 | R@10 | R-precision | P@5 | P@10 | "
-            "max P@5 | max P@10 | error |",
+            "| query | category | attributes | status | relevant | "
+            "retrieved dream IDs (ranked) | correct dream IDs | "
+            "missing correct dream IDs | hits@5 | hits@10 | R@5 | R@10 | "
+            "R-precision | error |",
             markdown,
         )
         self.assertIn("| dogs | direct | topical | ok | 2 |", markdown)
         self.assertIn("retrieved dream IDs (ranked)", markdown)
         self.assertIn("correct dream IDs", markdown)
+        self.assertIn("missing correct dream IDs", markdown)
         self.assertIn('["a", "other\\|dream"] | ["a", "b"]', markdown)
+        self.assertIn('["a", "b"] | ["b"] |', markdown)
         self.assertIn("## Attribute macro averages", markdown)
         self.assertNotIn("routing accuracy", markdown.lower())
         self.assertIn("| dogs | semantic | none |", markdown)
