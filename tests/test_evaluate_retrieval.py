@@ -517,6 +517,16 @@ class RetrievalMetricTests(unittest.TestCase):
         self.assertIn("max P@5", markdown)
         self.assertIn("max P@10", markdown)
         self.assertIn("R-precision", markdown)
+        self.assertIn(
+            "| group | queries | evaluated | errors | R@5 | R@10 | "
+            "R-precision | P@5 | P@10 | max P@5 | max P@10 |",
+            markdown,
+        )
+        self.assertIn(
+            "| hits@5 | hits@10 | R@5 | R@10 | R-precision | P@5 | P@10 | "
+            "max P@5 | max P@10 | error |",
+            markdown,
+        )
         self.assertIn("| dogs | direct | topical | ok | 2 |", markdown)
         self.assertIn("retrieved dream IDs (ranked)", markdown)
         self.assertIn("correct dream IDs", markdown)

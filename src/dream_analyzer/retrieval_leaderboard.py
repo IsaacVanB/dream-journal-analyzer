@@ -436,7 +436,7 @@ def _group_markdown(group: dict[str, Any]) -> list[str]:
                 f"#### Embedding: `{_escape(model_group['embed_model'])}`; "
                 f"chat: `{_escape(model_group['chat_model'])}`",
                 "",
-                "| Experiment | Mode | Created | Queries | R-precision | R@5 | R@10 | Errors | Mean seconds/query | Note |",
+                "| Experiment | Mode | Created | Queries | R@5 | R@10 | R-precision | Errors | Mean seconds/query | Note |",
                 "|---|---|---|---:|---:|---:|---:|---:|---:|---|",
             ]
         )
@@ -444,9 +444,9 @@ def _group_markdown(group: dict[str, Any]) -> list[str]:
             lines.append(
                 f"| {_experiment_link(entry)} | {_escape(entry['mode'])} | "
                 f"{_escape(entry['created_at'])} | {_display(entry['query_count'])} | "
-                f"{_metric_cell(model_group, 'r_precision', entry)} | "
                 f"{_metric_cell(model_group, 'recall_at_5', entry)} | "
                 f"{_metric_cell(model_group, 'recall_at_10', entry)} | "
+                f"{_metric_cell(model_group, 'r_precision', entry)} | "
                 f"{_metric_cell(model_group, 'error_query_count', entry)} | "
                 f"{_metric_cell(model_group, 'mean_retrieval_seconds', entry)} | "
                 f"{_escape(entry['note'])} |"

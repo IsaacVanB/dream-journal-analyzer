@@ -131,7 +131,10 @@ class RetrievalLeaderboardTests(unittest.TestCase):
         self.assertIn("[hybrid experiment](<benchmark_hybrid.md>)", markdown)
         self.assertIn("Older or incompatible experiment groups", markdown)
         self.assertIn("Embedding: `test-embed`; chat: `test-chat`", markdown)
-        self.assertIn("| Experiment | Mode | Created |", markdown)
+        self.assertIn(
+            "| Experiment | Mode | Created | Queries | R@5 | R@10 | R-precision |",
+            markdown,
+        )
         self.assertNotIn("P@5", markdown)
         self.assertNotIn("P@10", markdown)
 

@@ -917,7 +917,7 @@ def _display(value: Any) -> str:
 
 def _summary_table(rows: Iterable[tuple[str, dict[str, Any]]]) -> list[str]:
     lines = [
-        "| group | queries | evaluated | errors | P@5 | max P@5 | R@5 | P@10 | max P@10 | R@10 | R-precision |",
+        "| group | queries | evaluated | errors | R@5 | R@10 | R-precision | P@5 | P@10 | max P@5 | max P@10 |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for label, summary in rows:
@@ -925,13 +925,13 @@ def _summary_table(rows: Iterable[tuple[str, dict[str, Any]]]) -> list[str]:
             f"| {label} | {summary['query_count']} | "
             f"{summary['evaluated_query_count']} | "
             f"{summary['error_query_count']} | "
-            f"{_display(summary['precision_at_5'])} | "
-            f"{_display(summary['max_precision_at_5'])} | "
             f"{_display(summary['recall_at_5'])} | "
-            f"{_display(summary['precision_at_10'])} | "
-            f"{_display(summary['max_precision_at_10'])} | "
             f"{_display(summary['recall_at_10'])} | "
-            f"{_display(summary['r_precision'])} |"
+            f"{_display(summary['r_precision'])} | "
+            f"{_display(summary['precision_at_5'])} | "
+            f"{_display(summary['precision_at_10'])} | "
+            f"{_display(summary['max_precision_at_5'])} | "
+            f"{_display(summary['max_precision_at_10'])} |"
         )
     return lines
 
@@ -1032,7 +1032,7 @@ def markdown_report(report: dict[str, Any]) -> str:
             "",
             "## Per-query results",
             "",
-            "| query | category | attributes | status | relevant | retrieved dream IDs (ranked) | correct dream IDs | hits@5 | P@5 | max P@5 | R@5 | hits@10 | P@10 | max P@10 | R@10 | R-precision | error |",
+            "| query | category | attributes | status | relevant | retrieved dream IDs (ranked) | correct dream IDs | hits@5 | hits@10 | R@5 | R@10 | R-precision | P@5 | P@10 | max P@5 | max P@10 | error |",
             "|---|---|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
         ]
     )
@@ -1047,11 +1047,14 @@ def markdown_report(report: dict[str, Any]) -> str:
             f"{_format_dream_ids(row.get('retrieved_dream_ids', ()))} | "
             f"{_format_dream_ids(row.get('relevant_dream_ids', ()))} | "
             f"{_display(row['relevant_at_5'])} | "
-            f"{_display(row['precision_at_5'])} | "
-            f"{_display(row['max_precision_at_5'])} | {_display(row['recall_at_5'])} | "
-            f"{_display(row['relevant_at_10'])} | {_display(row['precision_at_10'])} | "
-            f"{_display(row['max_precision_at_10'])} | {_display(row['recall_at_10'])} | "
+            f"{_display(row['relevant_at_10'])} | "
+            f"{_display(row['recall_at_5'])} | "
+            f"{_display(row['recall_at_10'])} | "
             f"{_display(row['r_precision'])} | "
+            f"{_display(row['precision_at_5'])} | "
+            f"{_display(row['precision_at_10'])} | "
+            f"{_display(row['max_precision_at_5'])} | "
+            f"{_display(row['max_precision_at_10'])} | "
             f"{error} |"
         )
     if retrieval_mode == "agent":
