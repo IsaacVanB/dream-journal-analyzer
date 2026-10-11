@@ -305,6 +305,17 @@ class RetrievalLeaderboardTests(unittest.TestCase):
                 "benchmark_broken.json",
             )
 
+            custom_json, custom_markdown = write_leaderboard(
+                root, name="personal_leaderboard"
+            )
+            self.assertEqual(custom_json.name, "personal_leaderboard.json")
+            self.assertEqual(custom_markdown.name, "personal_leaderboard.md")
+            self.assertTrue(custom_json.is_file())
+            self.assertTrue(custom_markdown.is_file())
+
+            with self.assertRaisesRegex(ValueError, "filename stem"):
+                write_leaderboard(root, name="../outside")
+
 
 if __name__ == "__main__":
     unittest.main()

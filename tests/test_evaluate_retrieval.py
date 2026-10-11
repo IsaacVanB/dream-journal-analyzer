@@ -236,6 +236,11 @@ class RetrievalMetricTests(unittest.TestCase):
         self.assertEqual(agent_args.dreams_path, Path("data/dreams.jsonl"))
         self.assertEqual(agent_args.characters_path, Path("data/characters.json"))
         self.assertEqual(agent_args.chroma_path, "data/chroma_db")
+        self.assertEqual(agent_args.leaderboard_name, "leaderboard")
+        custom_args = parser.parse_args(
+            ["--leaderboard-name", "personal_leaderboard"]
+        )
+        self.assertEqual(custom_args.leaderboard_name, "personal_leaderboard")
         for mode in ("embedding", "bm25", "hybrid"):
             with self.subTest(mode=mode):
                 args = parser.parse_args(["--retrieval-mode", mode])
@@ -259,7 +264,13 @@ class RetrievalMetricTests(unittest.TestCase):
             json_path.write_text(json.dumps(report), encoding="utf-8")
             parser = evaluate_retrieval.build_parser()
             args = parser.parse_args(
-                ["--regenerate-markdown", "--output-dir", str(output_dir)]
+                [
+                    "--regenerate-markdown",
+                    "--output-dir",
+                    str(output_dir),
+                    "--leaderboard-name",
+                    "custom_results",
+                ]
             )
 
             with redirect_stdout(StringIO()):
@@ -268,8 +279,8 @@ class RetrievalMetricTests(unittest.TestCase):
             markdown_path = output_dir / "benchmark_bm25_example.md"
             self.assertEqual(result["markdown_paths"], [markdown_path])
             self.assertIn("# Retrieval benchmark", markdown_path.read_text())
-            self.assertTrue((output_dir / "leaderboard.json").is_file())
-            self.assertTrue((output_dir / "leaderboard.md").is_file())
+            self.assertTrue((output_dir / "custom_results.json").is_file())
+            self.assertTrue((output_dir / "custom_results.md").is_file())
 
     def test_recalculates_stored_rankings_with_corrected_relevance_ids(self) -> None:
         old_row = {

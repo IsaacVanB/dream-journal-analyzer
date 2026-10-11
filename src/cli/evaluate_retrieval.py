@@ -26,7 +26,11 @@ from dream_analyzer.repository import (
     DreamRepository,
     StructuredDreamRepository,
 )
-from dream_analyzer.retrieval_leaderboard import file_sha256, write_leaderboard
+from dream_analyzer.retrieval_leaderboard import (
+    file_sha256,
+    validate_leaderboard_name,
+    write_leaderboard,
+)
 
 
 QUERIES_PATH = Path("data/retrieval_eval_queries.json")
@@ -1372,6 +1376,15 @@ def build_parser(
     parser.add_argument("--temperature", type=float, default=0.1)
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     parser.add_argument(
+        "--leaderboard-name",
+        type=validate_leaderboard_name,
+        default="leaderboard",
+        help=(
+            "Filename stem for leaderboard JSON and Markdown artifacts. "
+            "Defaults to 'leaderboard'."
+        ),
+    )
+    parser.add_argument(
         "--experiment-name",
         help="Short label shown in the running retrieval leaderboard.",
     )
@@ -1422,11 +1435,13 @@ def run_command(
     parser: argparse.ArgumentParser,
 ) -> dict[str, Any]:
     """Run a benchmark or perform a report-maintenance action."""
+    leaderboard_name = getattr(args, "leaderboard_name", "leaderboard")
     if args.recalculate_metrics:
         try:
             result = recalculate_metrics(args.output_dir, args.queries_path)
             leaderboard_json, leaderboard_markdown = write_leaderboard(
                 args.output_dir,
+                name=leaderboard_name,
                 current_query_fingerprint=result["query_fingerprint"],
                 current_dream_fingerprint=result["dream_fingerprint"],
             )
@@ -1448,7 +1463,8 @@ def run_command(
         try:
             markdown_paths = regenerate_markdown_reports(args.output_dir)
             leaderboard_json, leaderboard_markdown = write_leaderboard(
-                args.output_dir
+                args.output_dir,
+                name=leaderboard_name,
             )
         except (OSError, ValueError) as exc:
             parser.exit(2, f"error: {exc}\n")
@@ -1467,6 +1483,7 @@ def run_command(
     if args.rebuild_leaderboard:
         leaderboard_json, leaderboard_markdown = write_leaderboard(
             args.output_dir,
+            name=leaderboard_name,
             current_query_fingerprint=file_sha256(args.queries_path),
             current_dream_fingerprint=file_sha256(args.dreams_path),
         )
@@ -1491,6 +1508,7 @@ def run_command(
     write_text_atomic(markdown_path, markdown_report(report))
     leaderboard_json, leaderboard_markdown = write_leaderboard(
         args.output_dir,
+        name=leaderboard_name,
         current_query_fingerprint=report["fingerprints"]["queries_sha256"],
         current_dream_fingerprint=report["fingerprints"]["dreams_sha256"],
     )

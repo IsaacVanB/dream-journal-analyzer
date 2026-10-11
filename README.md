@@ -173,7 +173,8 @@ In this project's experiments, `nomic-embed-text` performed better on short quer
 dream-analyzer evaluate-retrieval \
   --retrieval-mode hybrid \
   --experiment-name "hybrid baseline" \
-  --experiment-note "Verbatim semantic and BM25 retrieval fused with RRF"
+  --experiment-note "Verbatim semantic and BM25 retrieval fused with RRF" \
+  --leaderboard-name personal_results
 ```
 
 ## Tech stack

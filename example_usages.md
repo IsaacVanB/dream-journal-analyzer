@@ -543,6 +543,9 @@ Arguments:
 - `--temperature`: planner sampling temperature. Defaults to `0.1`.
 - `--output-dir`: directory for benchmark reports and leaderboard artifacts.
   Defaults to `outputs/retrieval_evaluations`.
+- `--leaderboard-name`: filename stem for the leaderboard artifacts. For
+  example, `--leaderboard-name personal_results` writes
+  `personal_results.json` and `personal_results.md`. Defaults to `leaderboard`.
 - `--experiment-name`: optional short label shown in the leaderboard.
 - `--experiment-note`: optional note describing the experiment change.
 - `--rebuild-leaderboard`: rebuild leaderboard JSON and Markdown from existing

@@ -22,6 +22,25 @@ METRICS = (
 )
 
 
+def validate_leaderboard_name(name: str) -> str:
+    """Validate and return a leaderboard artifact filename stem."""
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or name != name.strip()
+        or name in {".", ".."}
+        or "/" in name
+        or "\\" in name
+        or name.casefold().endswith((".json", ".md"))
+        or name.startswith("benchmark_")
+    ):
+        raise ValueError(
+            "must be a filename stem without a path or extension and cannot "
+            "start with 'benchmark_'"
+        )
+    return name
+
+
 def file_sha256(path: Path | str) -> str | None:
     """Return a file-content fingerprint, or ``None`` when unavailable."""
     source = Path(path)
@@ -546,18 +565,20 @@ def markdown_leaderboard(leaderboard: dict[str, Any]) -> str:
 def write_leaderboard(
     output_dir: Path | str,
     *,
+    name: str = "leaderboard",
     current_query_fingerprint: str | None = None,
     current_dream_fingerprint: str | None = None,
 ) -> tuple[Path, Path]:
     """Rebuild and atomically write JSON and Markdown leaderboard artifacts."""
+    name = validate_leaderboard_name(name)
     directory = Path(output_dir)
     leaderboard = build_leaderboard(
         directory,
         current_query_fingerprint=current_query_fingerprint,
         current_dream_fingerprint=current_dream_fingerprint,
     )
-    json_path = directory / LEADERBOARD_JSON
-    markdown_path = directory / LEADERBOARD_MARKDOWN
+    json_path = directory / f"{name}.json"
+    markdown_path = directory / f"{name}.md"
     write_json_atomic(json_path, leaderboard)
     write_text_atomic(markdown_path, markdown_leaderboard(leaderboard))
     return json_path, markdown_path
