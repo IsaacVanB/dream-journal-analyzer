@@ -550,6 +550,10 @@ Arguments:
 - `--regenerate-markdown`: regenerate every `benchmark_*.md` file from its
   corresponding JSON artifact, then rebuild the leaderboard without running a
   new evaluation.
+- `--recalculate-metrics`: replace relevance labels in reports whose complete
+  query set matches `--queries-path`, recalculate metrics from their stored
+  ranked dream IDs, and rebuild their Markdown and the leaderboard without
+  rerunning retrieval.
 
 Every completed run updates the JSON and Markdown leaderboards in
 `outputs/retrieval_evaluations/`. Use `--rebuild-leaderboard` to regenerate them
@@ -560,6 +564,20 @@ To regenerate all benchmark Markdown reports after changing their renderer:
 ```bash
 dream-analyzer evaluate-retrieval --regenerate-markdown
 ```
+
+After correcting relevant dream IDs in an evaluation query file, recalculate
+all matching reports from their stored rankings:
+
+```bash
+dream-analyzer evaluate-retrieval \
+  --recalculate-metrics \
+  --queries-path data/retrieval_eval_queries.json
+```
+
+Reports for other query sets are skipped. Matching JSON reports are updated in
+place along with their Markdown files and the leaderboard. If a correction
+increases the relevance count beyond a stored baseline's ranking depth, the
+command stops and identifies the report that must be rerun.
 
 ## `src/cli/evaluate_retrieval_llm.py`
 

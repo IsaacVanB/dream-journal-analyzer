@@ -1095,6 +1095,23 @@ def _format_tool_call(call: dict[str, Any]) -> str:
     return rendered
 
 
+def _report_with_retrieval_mode(
+    report: dict[str, Any], source: Path
+) -> dict[str, Any]:
+    """Supply the mode omitted by historical report schemas."""
+    settings = report.get("settings")
+    if not isinstance(settings, dict):
+        raise ValueError("settings is not an object")
+    if "retrieval_mode" in settings:
+        return report
+    filename_mode = source.stem.removeprefix("benchmark_").split("_", 1)[0]
+    inferred_mode = filename_mode if filename_mode in RETRIEVAL_MODES else "agent"
+    return {
+        **report,
+        "settings": {**settings, "retrieval_mode": inferred_mode},
+    }
+
+
 def regenerate_markdown_reports(output_dir: Path | str) -> list[Path]:
     """Re-render every benchmark Markdown report from its JSON artifact."""
     directory = Path(output_dir)
@@ -1108,20 +1125,7 @@ def regenerate_markdown_reports(output_dir: Path | str) -> list[Path]:
             report = json.loads(json_path.read_text(encoding="utf-8"))
             if not isinstance(report, dict):
                 raise ValueError("top-level JSON value is not an object")
-            settings = report.get("settings")
-            if not isinstance(settings, dict):
-                raise ValueError("settings is not an object")
-            if "retrieval_mode" not in settings:
-                filename_mode = json_path.stem.removeprefix("benchmark_").split(
-                    "_", 1
-                )[0]
-                inferred_mode = (
-                    filename_mode if filename_mode in RETRIEVAL_MODES else "agent"
-                )
-                report = {
-                    **report,
-                    "settings": {**settings, "retrieval_mode": inferred_mode},
-                }
+            report = _report_with_retrieval_mode(report, json_path)
             rendered = markdown_report(report)
         except (OSError, KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"cannot render {json_path}: {exc}") from exc
@@ -1130,6 +1134,181 @@ def regenerate_markdown_reports(output_dir: Path | str) -> list[Path]:
     for markdown_path, rendered in rendered_reports:
         write_text_atomic(markdown_path, rendered)
     return [markdown_path for markdown_path, _ in rendered_reports]
+
+
+def _updated_summaries(
+    rows: list[dict[str, Any]],
+    *,
+    group_key: str,
+    existing: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        values = row.get(group_key, ())
+        if isinstance(values, str):
+            values = (values,)
+        for value in values:
+            grouped[str(value)].append(row)
+    previous = existing if isinstance(existing, dict) else {}
+    return {
+        label: {
+            **(
+                previous.get(label, {})
+                if isinstance(previous.get(label), dict)
+                else {}
+            ),
+            **summarize(group_rows),
+        }
+        for label, group_rows in sorted(grouped.items())
+    }
+
+
+def recalculate_metrics(
+    output_dir: Path | str,
+    queries_path: Path | str,
+) -> dict[str, Any]:
+    """Re-score stored rankings using corrected relevance judgments."""
+    directory = Path(output_dir)
+    query_source = Path(queries_path)
+    query_payload = load_evaluation_queries(query_source)
+    corrected_queries = {
+        item["query"]: item for item in query_payload["queries"]
+    }
+    corrected_query_names = set(corrected_queries)
+    query_fingerprint = file_sha256(query_source)
+    rendered_reports: list[tuple[Path, Path, dict[str, Any], str]] = []
+    skipped_json_paths: list[Path] = []
+    dream_fingerprints: set[str] = set()
+
+    json_paths = sorted(directory.glob("benchmark_*.json"))
+    if not json_paths:
+        raise ValueError(f"no benchmark JSON reports found in {directory}")
+
+    for json_path in json_paths:
+        try:
+            report = json.loads(json_path.read_text(encoding="utf-8"))
+            if not isinstance(report, dict):
+                raise ValueError("top-level JSON value is not an object")
+            report_rows = report.get("queries")
+            if not isinstance(report_rows, list) or not all(
+                isinstance(row, dict) for row in report_rows
+            ):
+                raise ValueError("queries is not a list of objects")
+            report_query_names = [row.get("query") for row in report_rows]
+            if not all(isinstance(query, str) for query in report_query_names):
+                raise ValueError("a report row has no valid query")
+            if len(report_query_names) != len(set(report_query_names)):
+                raise ValueError("report contains duplicate queries")
+        except (OSError, TypeError, ValueError) as exc:
+            raise ValueError(f"cannot recalculate {json_path}: {exc}") from exc
+
+        if set(report_query_names) != corrected_query_names:
+            skipped_json_paths.append(json_path)
+            continue
+
+        updated_rows = []
+        for row in report_rows:
+            corrected = corrected_queries[row["query"]]
+            relevant_ids = list(corrected["relevant_dream_ids"])
+            if row.get("status", "ok") == "ok":
+                retrieved_ids = row.get("retrieved_dream_ids")
+                if not isinstance(retrieved_ids, list) or not all(
+                    isinstance(dream_id, str) for dream_id in retrieved_ids
+                ):
+                    raise ValueError(
+                        f"cannot recalculate {json_path}: query {row['query']!r} "
+                        "has no valid stored ranking"
+                    )
+                retrieval_depth = row.get("retrieval_depth")
+                required_depth = max(max(CUTOFFS), len(relevant_ids))
+                if (
+                    isinstance(retrieval_depth, int)
+                    and not isinstance(retrieval_depth, bool)
+                    and retrieval_depth < required_depth
+                    and len(retrieved_ids) >= retrieval_depth
+                ):
+                    raise ValueError(
+                        f"cannot recalculate {json_path}: query {row['query']!r} "
+                        f"needs {required_depth} ranked results but the stored "
+                        f"retrieval depth is {retrieval_depth}; rerun this report"
+                    )
+                metrics = retrieval_metrics(retrieved_ids, relevant_ids)
+            else:
+                metrics = failed_retrieval_metrics(relevant_ids)
+            updated_rows.append(
+                {
+                    **row,
+                    "category": corrected["category"],
+                    "attributes": list(corrected["attributes"]),
+                    **metrics,
+                    "relevant_dream_ids": relevant_ids,
+                }
+            )
+
+        old_summary = report.get("summary")
+        summary = {
+            **(old_summary if isinstance(old_summary, dict) else {}),
+            **summarize(updated_rows),
+        }
+        fingerprints = report.get("fingerprints")
+        fingerprints = fingerprints if isinstance(fingerprints, dict) else {}
+        updated_report = {
+            **report,
+            "queries_path": str(query_source),
+            "journal_file": query_payload.get(
+                "journal_file", report.get("journal_file")
+            ),
+            "fingerprints": {
+                **fingerprints,
+                "queries_sha256": query_fingerprint,
+            },
+            "summary": summary,
+            "category_summaries": _updated_summaries(
+                updated_rows,
+                group_key="category",
+                existing=report.get("category_summaries"),
+            ),
+            "attribute_summaries": _updated_summaries(
+                updated_rows,
+                group_key="attributes",
+                existing=report.get("attribute_summaries"),
+            ),
+            "queries": updated_rows,
+        }
+        renderable_report = _report_with_retrieval_mode(updated_report, json_path)
+        rendered_reports.append(
+            (
+                json_path,
+                json_path.with_suffix(".md"),
+                updated_report,
+                markdown_report(renderable_report),
+            )
+        )
+        dream_fingerprint = fingerprints.get("dreams_sha256")
+        if isinstance(dream_fingerprint, str):
+            dream_fingerprints.add(dream_fingerprint)
+
+    if not rendered_reports:
+        raise ValueError(
+            "no benchmark reports have the same query set as "
+            f"{query_source}"
+        )
+
+    for json_path, markdown_path, report, rendered in rendered_reports:
+        write_json_atomic(json_path, report)
+        write_text_atomic(markdown_path, rendered)
+
+    return {
+        "json_paths": [item[0] for item in rendered_reports],
+        "markdown_paths": [item[1] for item in rendered_reports],
+        "skipped_json_paths": skipped_json_paths,
+        "query_fingerprint": query_fingerprint,
+        "dream_fingerprint": (
+            next(iter(dream_fingerprints))
+            if len(dream_fingerprints) == 1
+            else None
+        ),
+    }
 
 
 def build_parser(
@@ -1214,6 +1393,14 @@ def build_parser(
             "and rebuild the leaderboard without running an evaluation."
         ),
     )
+    maintenance_actions.add_argument(
+        "--recalculate-metrics",
+        action="store_true",
+        help=(
+            "Recalculate metrics in matching benchmark reports using relevance "
+            "labels from --queries-path, without rerunning retrieval."
+        ),
+    )
     return parser
 
 
@@ -1235,6 +1422,28 @@ def run_command(
     parser: argparse.ArgumentParser,
 ) -> dict[str, Any]:
     """Run a benchmark or perform a report-maintenance action."""
+    if args.recalculate_metrics:
+        try:
+            result = recalculate_metrics(args.output_dir, args.queries_path)
+            leaderboard_json, leaderboard_markdown = write_leaderboard(
+                args.output_dir,
+                current_query_fingerprint=result["query_fingerprint"],
+                current_dream_fingerprint=result["dream_fingerprint"],
+            )
+        except (OSError, ValueError) as exc:
+            parser.exit(2, f"error: {exc}\n")
+        print(
+            f"Recalculated {len(result['json_paths'])} benchmark report(s); "
+            f"skipped {len(result['skipped_json_paths'])} with other query sets"
+        )
+        print(f"Updated {leaderboard_json}")
+        print(f"Updated {leaderboard_markdown}")
+        return {
+            **result,
+            "leaderboard_json": leaderboard_json,
+            "leaderboard_markdown": leaderboard_markdown,
+        }
+
     if args.regenerate_markdown:
         try:
             markdown_paths = regenerate_markdown_reports(args.output_dir)

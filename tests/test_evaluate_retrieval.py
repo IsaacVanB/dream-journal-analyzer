@@ -271,6 +271,97 @@ class RetrievalMetricTests(unittest.TestCase):
             self.assertTrue((output_dir / "leaderboard.json").is_file())
             self.assertTrue((output_dir / "leaderboard.md").is_file())
 
+    def test_recalculates_stored_rankings_with_corrected_relevance_ids(self) -> None:
+        old_row = {
+            "query": "dreams about dogs",
+            "category": "old-category",
+            "attributes": ["old-attribute"],
+            "status": "ok",
+            "error": None,
+            "retrieval_seconds": 0.25,
+            "retrieved_dream_ids": ["a", "x", "b"],
+            "relevant_dream_ids": ["mistyped"],
+            **evaluate_retrieval.retrieval_metrics(
+                ["a", "x", "b"], ["mistyped"]
+            ),
+        }
+        report = {
+            "created_at": "2026-09-11T12:00:00-04:00",
+            "queries_path": "old-queries.json",
+            "settings": {"retrieval_mode": "bm25"},
+            "preflight": {"status": "ok"},
+            "fingerprints": {
+                "queries_sha256": "old-query-fingerprint",
+                "dreams_sha256": "dream-fingerprint",
+            },
+            "summary": evaluate_retrieval.summarize([old_row]),
+            "category_summaries": {
+                "old-category": evaluate_retrieval.summarize([old_row])
+            },
+            "attribute_summaries": {
+                "old-attribute": evaluate_retrieval.summarize([old_row])
+            },
+            "queries": [old_row],
+        }
+        corrected_queries = {
+            "num_queries": 1,
+            "journal_file": "personal-dreams.jsonl",
+            "queries": [
+                {
+                    "query": "dreams about dogs",
+                    "category": "direct",
+                    "attributes": ["topical"],
+                    "relevant_dream_ids": ["a", "b"],
+                }
+            ],
+        }
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            queries_path = root / "corrected-queries.json"
+            report_path = root / "benchmark_bm25_matching.json"
+            unmatched_path = root / "benchmark_bm25_unmatched.json"
+            queries_path.write_text(json.dumps(corrected_queries), encoding="utf-8")
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            unmatched_report = json.loads(json.dumps(report))
+            unmatched_report["queries"][0]["query"] = "a different query"
+            unmatched_path.write_text(json.dumps(unmatched_report), encoding="utf-8")
+            parser = evaluate_retrieval.build_parser()
+            args = parser.parse_args(
+                [
+                    "--recalculate-metrics",
+                    "--queries-path",
+                    str(queries_path),
+                    "--output-dir",
+                    str(root),
+                ]
+            )
+
+            with redirect_stdout(StringIO()):
+                result = evaluate_retrieval.run_command(args, parser)
+
+            updated = json.loads(report_path.read_text(encoding="utf-8"))
+            unmatched = json.loads(unmatched_path.read_text(encoding="utf-8"))
+            markdown = report_path.with_suffix(".md").read_text(encoding="utf-8")
+            corrected_fingerprint = evaluate_retrieval.file_sha256(queries_path)
+
+        row = updated["queries"][0]
+        self.assertEqual(result["json_paths"], [report_path])
+        self.assertEqual(result["skipped_json_paths"], [unmatched_path])
+        self.assertEqual(
+            unmatched["queries"][0]["relevant_dream_ids"], ["mistyped"]
+        )
+        self.assertEqual(row["relevant_dream_ids"], ["a", "b"])
+        self.assertEqual(row["category"], "direct")
+        self.assertEqual(row["attributes"], ["topical"])
+        self.assertEqual(row["recall_at_5"], 1.0)
+        self.assertEqual(row["r_precision"], 0.5)
+        self.assertEqual(updated["summary"]["r_precision"], 0.5)
+        self.assertEqual(
+            updated["fingerprints"]["queries_sha256"],
+            corrected_fingerprint,
+        )
+        self.assertIn('["a", "b"]', markdown)
+
     def test_embedding_baseline_embeds_query_verbatim_and_retrieves_to_r(self) -> None:
         calls = []
 
