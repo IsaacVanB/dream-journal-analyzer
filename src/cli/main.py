@@ -13,6 +13,7 @@ from cli import (
     compute_stats,
     dream_agent,
     evaluate_retrieval,
+    generate_demo,
     parse_dreams,
     plot_tags,
 )
@@ -64,6 +65,13 @@ def build_parser() -> argparse.ArgumentParser:
         "ask an agent a question about the journal",
         dream_agent.build_parser,
         dream_agent.run,
+    )
+    _add_command(
+        subparsers,
+        "demo",
+        "generate a README-ready transcript of an agent run",
+        generate_demo.build_parser,
+        generate_demo.run,
     )
     _add_command(
         subparsers,

@@ -56,6 +56,12 @@ dream-analyzer ask \
   "What patterns appear in dreams about hidden rooms?" \
   --dreams-path data/sample/dreams.jsonl \
   --chroma-path data/sample/chroma_db
+
+dream-analyzer demo \
+  "What patterns appear in dreams about hidden rooms?" \
+  --dreams-path data/sample/dreams.jsonl \
+  --chroma-path data/sample/chroma_db \
+  --output outputs/readme_demo.md
 ```
 
 To work with your own journal, copy it to the default private path and run the
@@ -82,6 +88,7 @@ See [`example_usages.md`](example_usages.md) for detailed command options and wo
 dream-analyzer parse               Parse journal text into structured JSONL
 dream-analyzer index               Build or synchronize the retrieval index
 dream-analyzer ask                 Ask a natural-language question
+dream-analyzer demo                Generate a README-ready agent transcript
 dream-analyzer analyze             Analyze an individual dream
 dream-analyzer stats               Compute journal statistics
 dream-analyzer trends              Analyze and plot tag trends
