@@ -16,6 +16,7 @@ dream-analyzer --help
 dream-analyzer parse --help
 dream-analyzer index --help
 dream-analyzer ask --help
+dream-analyzer demo --help
 dream-analyzer analyze --help
 dream-analyzer stats --help
 dream-analyzer trends --help
@@ -343,6 +344,70 @@ combined with semantic search terms. Character-mention questions require the
 structured file; relationship questions use the character dictionary. Debug
 traces can contain private journal text, so protect reports created with
 `--debug`.
+
+Requires an existing matching ChromaDB index, a tool-capable chat model, and
+Ollama running locally.
+
+## `dream-analyzer demo`
+
+Runs the same question-answering agent as `dream-analyzer ask` and saves a
+README-ready Markdown transcript. The report includes the user's question,
+run settings, exact tool names and arguments, the full text of every unique
+retrieved dream, the final reciprocal-rank-fusion (RRF) ranking, and the
+model's response. Repeated dreams are shown once in the full-text section and
+retain references to every tool call that returned them.
+
+```bash
+dream-analyzer demo \
+  "What patterns appear in dreams about hidden rooms?"
+
+dream-analyzer demo \
+  "How do school anxiety dreams appear?" \
+  --dreams-path data/dreams.jsonl \
+  --chroma-path data/chroma_db \
+  --collection-name dreams_nomic_embed_text \
+  --output outputs/readme_demo.md
+
+python3 src/cli/generate_demo.py \
+  "Compare house and school dreams" \
+  --max-tool-calls 3 \
+  --debug \
+  --output outputs/readme_demo.md
+```
+
+Arguments:
+
+- `question`: required question to answer from the journal.
+- `--output`: Markdown destination. Defaults to
+  `outputs/readme_demo.md`; parent directories are created automatically.
+- `--top-k`: maximum results returned by each search call. Defaults to `8`
+  and is capped at `20`.
+- `--max-tool-calls`: maximum tool calls permitted for one answer. Defaults
+  to `3`.
+- `--max-synthesis-dreams`: maximum unique dreams included in the final answer
+  prompt. Defaults to `10` and is capped at `20`. The report's ranking still
+  shows all retrieved candidates.
+- `--max-chars-per-dream`: maximum journal characters per dream passed to the
+  model. Defaults to `2500`; the report uses the complete stored dream text.
+- `--debug`: add the model's assistant messages, request prompts, and Ollama
+  response diagnostics to an `Agent Turn Trace` section.
+- `--dreams-path`, `--structured-dreams-path`, and `--characters-path`: select
+  the parsed journal and optional structured character data, with the same
+  defaults as `dream-analyzer ask`.
+- `--chroma-path`, `--collection-name`, and `--embed-model`: select the
+  existing vector index and its matching Ollama embedding model. They default
+  to `data/chroma_db`, `dreams_nomic_embed_text`, and `nomic-embed-text`.
+- `--chat-model`, `--num-ctx`, `--num-predict`, and `--temperature`: control
+  final answer generation, with the same defaults as `dream-analyzer ask`.
+
+The default output path is ignored by Git because `.gitignore` excludes
+`outputs/*`. To publish that exact file in the repository, explicitly force-add
+it with `git add -f outputs/readme_demo.md`, add a narrow `.gitignore`
+exception, or copy the finished report to a tracked location.
+
+Demo reports contain complete journal entries, and debug reports can also
+contain complete prompts. Review the generated Markdown for private information
+before committing or publishing it.
 
 Requires an existing matching ChromaDB index, a tool-capable chat model, and
 Ollama running locally.

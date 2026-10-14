@@ -26,6 +26,34 @@ The project is also an experimental platform for evaluating retrieval strategies
 
 All model inference and journal processing can run locally through [Ollama](https://ollama.com/).
 
+## Demo
+
+Using `qwen3:8b`, `nomic-embed-text`, and the synthetic journal included with
+the project:
+
+> **User:** What patterns appear in dreams about hidden rooms?
+
+**Model response:**
+
+| dream_id | date | relevant evidence | conflict/theme |
+|---|---|---|---|
+| dream-2026-1-11-0 | 1/11/2026 | Hidden room with doors from earlier dreams, green carpet, guest book | Room acts as a station, not just a room |
+| dream-2024-11-17-0 | 11/17/2024 | Hidden hallway with water, green carpet, valve labeled MEMORY SUPPLY | Room is connected to memory, water symbolizes emotional or psychological states |
+| dream-2025-5-18-0 | 5/18/2025 | Hidden room with objects from other dreams, door appears after arranging objects | Room is a repository of memories and experiences |
+| dream-2026-8-16-0 | 8/16/2026 | Hidden room system with multiple doors, mapping leads to contradictions | Room system is complex and interconnected, resisting linear understanding |
+| dream-2026-4-19-0 | 4/19/2026 | Hidden room with multiple entrances, classroom as an entrance | Room is accessible through various contexts, including waking life |
+| dream-2025-5-5-0 | 5/5/2025 | Hidden hallway with keys labeled for rooms, someone warns against certain choices | Room system is navigable but with potential consequences |
+| dream-2024-5-9-0 | 5/9/2024 | Hidden room behind a bookcase, contains objects from neighboring apartments | Room is a shared space, possibly connected to other dreamers' lives |
+| dream-2022-5-15-2 | 5/15/2022 | Hidden staircase leads to a furnished room with photographs showing past and future | Room contains temporal elements, suggesting it exists outside linear time |
+| dream-2023-4-2-0 | 4/2/2023 | Hidden closet leads to a room with birthday cards for future events | Room contains future-oriented elements, suggesting it is a space for potential |
+
+**Synthesis:**
+
+Dreams about hidden rooms often feature interconnected spaces that serve as repositories for memories, experiences, and future possibilities. These rooms are frequently accessed through various means—doors behind walls, bookcases, or even classrooms—and are often described as stations or hubs rather than simple rooms. The rooms contain objects from other dreams, suggesting a shared or collective unconscious space. Water and memory are recurring themes, with some rooms flooding or containing valves labeled "MEMORY SUPPLY." The rooms also appear to exist outside of linear time, with photographs showing past and future events. These dreams often involve a sense of discovery, but also a warning against overexploration, as the rooms resist being fully mapped or understood.
+
+See the [full demo transcript](examples/readme_demo_nomic_qwen.md) for the
+agent's tool calls, retrieved dream text, and final retrieval ranking.
+
 ## Quick start
 
 Requires Python 3.10+ and a local [Ollama](https://ollama.com/) installation.
